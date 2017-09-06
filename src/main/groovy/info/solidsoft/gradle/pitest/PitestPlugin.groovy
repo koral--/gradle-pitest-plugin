@@ -202,10 +202,19 @@ class PitestPlugin implements Plugin<Project> {
         } else {
             fileExt = ".jar"
         }
+        String versionExtra
+        /*
+         * The Android Gradle Plugin 3.0.0+ creates the mockable JAR in a different path.
+         */
+        if (com.android.builder.model.Version.ANDROID_GRADLE_PLUGIN_VERSION.startsWith('3.')) {
+            versionExtra = '.v3'
+        } else {
+            versionExtra = ''
+        }
         File outDir = new File(project.rootProject.buildDir, AndroidProject.FD_GENERATED)
 
         String sdkName = sanitizeSdkVersion(android.compileSdkVersion)
-        return new File(outDir, "mockable-" + sdkName + fileExt)
+        return new File(outDir, "mockable-" + sdkName + versionExtra + ".jar")
     }
 
     static def sanitizeSdkVersion(def version) {
