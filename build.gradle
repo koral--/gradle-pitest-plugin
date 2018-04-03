@@ -9,7 +9,7 @@ plugins {
     id 'signing'
 }
 
-sourceCompatibility = 1.7
+sourceCompatibility = 1.8
 
 group = GROUP
 version = VERSION
@@ -39,13 +39,13 @@ dependencies {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
     testCompile 'info.solidsoft.spock:spock-global-unroll:0.5.1'
-    testCompile 'net.bytebuddy:byte-buddy:1.7.5' //for Spying in Spock
+    testCompile 'net.bytebuddy:byte-buddy:1.7.9' //for Spying in Spock
     testCompile 'junit:junit:4.12'
 
     funcTestCompile sourceSets.main.output  //to make production plugin classes visible in functional tests (it's not in testCompile configuration)
     funcTestCompile configurations.testCompile
     funcTestRuntime configurations.testRuntime
-    funcTestCompile('com.netflix.nebula:nebula-test:6.1.2') {
+    funcTestCompile('com.netflix.nebula:nebula-test:6.2.0') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
 }
@@ -60,7 +60,7 @@ task funcTest(type: Test) {
 }
 funcTest.shouldRunAfter test
 check.shouldRunAfter funcTest
-check.dependsOn funcTestClasses
+check.dependsOn funcTestClasses     //or more generically: tasks.withType(AbstractCompile)
 uploadArchives.dependsOn funcTest, check
 
 task testReport(type: TestReport) {
@@ -77,7 +77,7 @@ publishPlugins.dependsOn funcTest, check
 uploadArchives.dependsOn funcTest, check
 
 wrapper {
-    gradleVersion "4.4.1"
+    gradleVersion "4.5"
     distributionType ALL
 }
 
