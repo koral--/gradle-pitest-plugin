@@ -1,12 +1,11 @@
 plugins {
-    id 'com.bmuschko.nexus' version '2.3.1'
-    id 'com.github.ben-manes.versions' version '0.38.0'
+    id 'com.github.ben-manes.versions' version '0.39.0'
     id 'groovy'
     id 'maven-publish'
     id 'codenarc'
     id 'signing'
     id 'java-gradle-plugin'
-    id 'com.gradle.plugin-publish' version '0.13.0'
+    id 'com.gradle.plugin-publish' version '0.15.0'
 }
 
 sourceCompatibility = 1.8
@@ -15,7 +14,6 @@ repositories {
     mavenCentral()
     mavenLocal()
     google()
-    jcenter()
 }
 
 sourceSets {
@@ -27,14 +25,14 @@ dependencies {
     implementation localGroovy()
     implementation 'com.android.tools.build:gradle:4.1.2'
 
-    testImplementation('org.spockframework:spock-core:2.0-M3-groovy-2.5') {
+    testImplementation('org.spockframework:spock-core:2.0-groovy-3.0') {
         exclude group: 'org.codehaus.groovy'
     }
     //for "@Rule TemporaryFolder"
-    testImplementation('org.spockframework:spock-junit4:2.0-M3-groovy-2.5') {
+    testImplementation('org.spockframework:spock-junit4:2.0-groovy-3.0') {
         exclude group: 'org.codehaus.groovy'
     }
-    testImplementation 'net.bytebuddy:byte-buddy:1.10.21' //for Spying in Spock
+    testImplementation 'net.bytebuddy:byte-buddy:1.11.12' //for Spying in Spock
 
     funcTestImplementation sourceSets.main.output
     //to make production plugin classes visible in functional tests (it's not in testImplementation configuration)
@@ -57,7 +55,6 @@ task funcTest(type: Test) {
 funcTest.shouldRunAfter test
 check.shouldRunAfter funcTest
 check.dependsOn funcTestClasses     //or more generically: tasks.withType(AbstractCompile)
-uploadArchives.dependsOn funcTest, check
 publishPlugins.dependsOn funcTest, check
 
 task testReport(type: TestReport) {
@@ -81,11 +78,6 @@ tasks.withType(Test).configureEach { testTask ->
             }
         }
     }
-}
-
-tasks.validateTaskProperties {
-    enableStricterValidation = true
-    failOnWarning = true
 }
 
 codenarc {
@@ -114,48 +106,6 @@ tasks.withType(CodeNarc) { codeNarcTask ->
             logger.warn("****************************** CODE NARC ******************************\n")
         }
     })
-}
-
-modifyPom {
-    project {
-        name POM_NAME
-        description POM_DESCRIPTION
-        url POM_URL
-
-        scm {
-            connection POM_SCM_CONNECTION_URL
-            developerConnection POM_SCM_CONNECTION_URL
-            url POM_URL
-        }
-
-        licenses {
-            license {
-                name 'The Apache Software License, Version 2.0'
-                url 'http://www.apache.org/licenses/LICENSE-2.0'
-                distribution 'repo'
-            }
-        }
-
-        developers {
-            developer {
-                id 'szpak'
-                name 'Marcin Zajączkowski'
-                email 'mszpak ATT wp DOTT pl'
-                roles {
-                    role 'despot'
-                    role 'developer'
-                }
-            }
-            developer {
-                id 'koral'
-                name 'Karol Wrótniak'
-                email 'karol.wrotniak@droidsonroids.pl'
-                roles {
-                    role 'developer'
-                }
-            }
-        }
-    }
 }
 
 pluginBundle {
