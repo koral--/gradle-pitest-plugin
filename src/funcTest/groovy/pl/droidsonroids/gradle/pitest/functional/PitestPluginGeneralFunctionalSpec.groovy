@@ -4,6 +4,7 @@ import pl.droidsonroids.gradle.pitest.PitestPlugin
 import groovy.transform.CompileDynamic
 import nebula.test.functional.ExecutionResult
 import org.junit.Rule
+import org.junit.Ignore
 import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
 
@@ -13,6 +14,7 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
     @Rule
     protected TemporaryFolder tmpDir = new TemporaryFolder()
 
+    @Ignore("Bintray not accessible")
     void "enable PIT plugin when on classpath and pass plugin configuration to PIT"() {
         given:
             buildFile << getBasicGradlePitestConfig()

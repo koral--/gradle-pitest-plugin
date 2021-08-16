@@ -1,3 +1,6 @@
+import org.gradle.api.internal.classpath.ModuleRegistry
+import org.gradle.api.internal.project.ProjectInternal
+
 plugins {
     id 'com.github.ben-manes.versions' version '0.39.0'
     id 'groovy'
@@ -23,7 +26,7 @@ sourceSets {
 dependencies {
     implementation gradleApi()
     implementation localGroovy()
-    implementation 'com.android.tools.build:gradle:4.1.2'
+    implementation 'com.android.tools.build:gradle:7.0.0'
 
     testImplementation('org.spockframework:spock-core:2.0-groovy-3.0') {
         exclude group: 'org.codehaus.groovy'
@@ -41,6 +44,12 @@ dependencies {
     funcTestImplementation('com.netflix.nebula:nebula-test:8.1.0') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
+    def toolingApiBuildersJar = (project as ProjectInternal).services.get(ModuleRegistry.class)
+        .getModule("gradle-tooling-api-builders")
+        .classpath
+        .asFiles
+        .first()
+    testRuntimeOnly(files(toolingApiBuildersJar))
 }
 
 task funcTest(type: Test) {
