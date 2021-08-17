@@ -9,6 +9,7 @@ plugins {
     id 'signing'
     id 'java-gradle-plugin'
     id 'com.gradle.plugin-publish' version '0.15.0'
+    id 'com.vanniktech.maven.publish' version '0.13.0'
 }
 
 sourceCompatibility = 1.8
@@ -122,7 +123,7 @@ pluginBundle {
     vcsUrl = POM_URL
     tags = ['pitest', 'android', 'mutation testing']
     description = POM_DESCRIPTION
-    version = VERSION
+    version = VERSION_NAME
     group = GROUP
 
     plugins {
