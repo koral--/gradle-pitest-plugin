@@ -38,13 +38,11 @@ abstract class AbstractPitestFunctionalSpec extends IntegrationSpec {
                 repositories {
                     google()
                     mavenCentral()
-                    jcenter()
                 }
                 buildscript {
                     repositories {
                         google()
                         mavenCentral()
-                        jcenter()
                     }
                 }
                 dependencies {

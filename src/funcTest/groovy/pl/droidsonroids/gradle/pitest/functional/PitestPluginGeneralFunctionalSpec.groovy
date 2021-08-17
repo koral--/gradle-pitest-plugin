@@ -4,7 +4,7 @@ import pl.droidsonroids.gradle.pitest.PitestPlugin
 import groovy.transform.CompileDynamic
 import nebula.test.functional.ExecutionResult
 import org.junit.Rule
-import org.junit.Ignore
+import spock.lang.Ignore
 import org.junit.rules.TemporaryFolder
 import spock.lang.Issue
 
