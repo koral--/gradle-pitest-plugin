@@ -134,17 +134,6 @@ pluginBundle {
     }
 }
 
-publishing {
-    repositories {
-        mavenLocal()
-    }
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-}
-
 gradlePlugin {
     testSourceSets sourceSets.funcTest
     plugins {
