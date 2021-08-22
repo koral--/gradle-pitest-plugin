@@ -133,18 +133,17 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
 
                 buildscript {
                     repositories {
-                        jcenter()
                         google()
                     }
                     dependencies {
-                        classpath 'com.android.tools.build:gradle:4.0.1'
+                        classpath 'com.android.tools.build:gradle:7.0.0'
                     }
                 }
                 repositories {
                     google()
                     mavenCentral()
                 }
-                dependencies { testImplementation 'junit:junit:4.12' }
+                dependencies { testImplementation 'junit:junit:4.13.2' }
 
                 pitest {
                     reportDir = file("build/pitest-reports")

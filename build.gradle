@@ -59,7 +59,7 @@ task funcTest(type: Test) {
     testClassesDirs = sourceSets.funcTest.output.classesDirs
     classpath = sourceSets.funcTest.runtimeClasspath
     jvmArgs '-Xmx1g'
-    systemProperty('ignoreDeprecations', 'true') //FIXME merge remove after AGP stops using deprecated API
+    systemProperty('ignoreDeprecations', 'true') //FIXME remove after AGP stops using deprecated API
 }
 
 funcTest.shouldRunAfter test
