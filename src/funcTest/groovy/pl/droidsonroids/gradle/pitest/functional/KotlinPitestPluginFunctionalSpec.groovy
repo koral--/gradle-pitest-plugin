@@ -18,6 +18,7 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
                 buildscript {
                     repositories {
                         google()
+                        mavenCentral()
                     }
                     dependencies {
                         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.21"
@@ -39,7 +40,6 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
                 repositories {
                     google()
                     mavenCentral()
-                    jcenter()
                 }
                 dependencies {
                     testImplementation 'junit:junit:4.13.2'

@@ -52,7 +52,6 @@ dependencies {
 repositories {
     google()
     mavenCentral()
-    jcenter()
 }
 
 pitest {
