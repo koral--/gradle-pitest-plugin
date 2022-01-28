@@ -60,8 +60,8 @@ class AndroidUtils {
                 targetSdkVersion 30
             }
             buildTypes {
-                release { }
-                debug { }
+                release {}
+                debug {}
             }
             productFlavors {
                 flavorDimensions 'tier', 'color'

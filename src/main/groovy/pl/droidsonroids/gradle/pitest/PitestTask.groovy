@@ -151,7 +151,8 @@ class PitestTask extends JavaExec {
 
     @InputFiles
     @Classpath
-    final ConfigurableFileCollection additionalClasspath    //"classpath" is already defined internally in ExecTask
+    final ConfigurableFileCollection additionalClasspath
+    //"classpath" is already defined internally in ExecTask
 
     @Input
     final Property<Boolean> useAdditionalClasspathFile
@@ -232,13 +233,15 @@ class PitestTask extends JavaExec {
     @Option(option = "additionalFeatures", description = "Additional PIT features to be appended to those placed in configuration")
     @Input
     @Optional
-    List<String> additionalFeatures //ListProperty<String> cannot be used with @Option - https://github.com/gradle/gradle/issues/10517
+    List<String> additionalFeatures
+    //ListProperty<String> cannot be used with @Option - https://github.com/gradle/gradle/issues/10517
 
     @Incubating
     @Option(option = "targetTests", description = "Tests classes to use. Overrides 'testClasses' defined in configuration")
     @Input
     @Optional
-    List<String> overriddenTargetTests  //should be Set<String> or SetProperty but it's not supported in Gradle as of 5.6.1
+    List<String> overriddenTargetTests
+    //should be Set<String> or SetProperty but it's not supported in Gradle as of 5.6.1
 
     PitestTask() {
         getMainClass().set("org.pitest.mutationtest.commandline.MutationCoverageReport")
@@ -330,7 +333,8 @@ class PitestTask extends JavaExec {
         return argsAsList + multiValueArgsAsList
     }
 
-    @PackageScope   //visible for testing
+    @PackageScope
+    //visible for testing
     Map<String, String> taskArgumentMap() {
         Map<String, String> map = [:]
         map['testPlugin'] = testPlugin.getOrNull()
@@ -364,7 +368,8 @@ class PitestTask extends JavaExec {
         map['testStrengthThreshold'] = optionalPropertyAsString(testStrengthThreshold)
         map['mutationEngine'] = mutationEngine.getOrNull()
         map['exportLineCoverage'] = optionalPropertyAsString(exportLineCoverage)
-        map['includeLaunchClasspath'] = Boolean.FALSE.toString()   //code to analyse is passed via classPath
+        map['includeLaunchClasspath'] = Boolean.FALSE.toString()
+        //code to analyse is passed via classPath
         map['jvmPath'] = getJvmPath()?.getOrNull()?.asFile?.absolutePath
         map['maxSurviving'] = optionalPropertyAsString(maxSurviving)
         map['useClasspathJar'] = optionalPropertyAsString(useClasspathJar)
@@ -393,10 +398,10 @@ class PitestTask extends JavaExec {
 
     private Map<String, String> prepareMapWithIncrementalAnalysisConfiguration() {
         if (enableDefaultIncrementalAnalysis.getOrNull()) {
-            return [historyInputLocation: getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath ?: getDefaultFileForHistoryData().asFile.get().absolutePath,
+            return [historyInputLocation : getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath ?: getDefaultFileForHistoryData().asFile.get().absolutePath,
                     historyOutputLocation: getHistoryOutputLocation()?.getOrNull()?.asFile?.absolutePath ?: getDefaultFileForHistoryData().asFile.get().absolutePath,]
         } else {
-            return [historyInputLocation: getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath,
+            return [historyInputLocation : getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath,
                     historyOutputLocation: getHistoryOutputLocation()?.getOrNull()?.asFile?.absolutePath,]
         }
     }
@@ -423,7 +428,8 @@ class PitestTask extends JavaExec {
         return optionalListProperty.getOrNull()?.join(',')
     }
 
-    @PackageScope   //visible for testing
+    @PackageScope
+    //visible for testing
     List<String> multiValueArgsAsList() {
         //It is a duplication/special case handling, but a PoC implementation with emulated multimap was also quite ugly and in addition error prone
         return pluginConfiguration.getOrNull()?.collect { k, v ->
