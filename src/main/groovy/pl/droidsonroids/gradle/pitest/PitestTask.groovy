@@ -398,10 +398,10 @@ class PitestTask extends JavaExec {
 
     private Map<String, String> prepareMapWithIncrementalAnalysisConfiguration() {
         if (enableDefaultIncrementalAnalysis.getOrNull()) {
-            return [historyInputLocation : getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath ?: getDefaultFileForHistoryData().asFile.get().absolutePath,
+            return [historyInputLocation: getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath ?: getDefaultFileForHistoryData().asFile.get().absolutePath,
                     historyOutputLocation: getHistoryOutputLocation()?.getOrNull()?.asFile?.absolutePath ?: getDefaultFileForHistoryData().asFile.get().absolutePath,]
         } else {
-            return [historyInputLocation : getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath,
+            return [historyInputLocation: getHistoryInputLocation()?.getOrNull()?.asFile?.absolutePath,
                     historyOutputLocation: getHistoryOutputLocation()?.getOrNull()?.asFile?.absolutePath,]
         }
     }
