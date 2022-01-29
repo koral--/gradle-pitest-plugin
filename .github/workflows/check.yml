@@ -1,0 +1,21 @@
+name: Check
+on:
+  [pull_request]
+jobs:
+    unit-tests:
+        name: Tests
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v2
+
+            - name: Setup Java 15
+              uses: actions/setup-java@v1
+              with:
+                  java-version: '15'
+
+            - name: Run Checks
+              run: ./gradlew test funcTest check --stacktrace --no-daemon -Dorg.gradle.jvmargs="-XX:MaxMetaspaceSize=512m -Xmx512m"
+
+            - name: Stop Gradle
+              run: ./gradlew --stop
