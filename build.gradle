@@ -135,6 +135,10 @@ pluginBundle {
             id = 'pl.droidsonroids.pitest'
             displayName = POM_NAME
         }
+        pitestAggregator {
+            id = 'pl.droidsonroids.pitest.aggregator'
+            displayName = 'Android gradle pitest report aggregator for multi-module project'
+        }
     }
 }
 
@@ -149,5 +153,11 @@ gradlePlugin {
             id = 'pl.droidsonroids.pitest.aggregator'
             implementationClass = 'pl.droidsonroids.gradle.pitest.PitestAggregatorPlugin'
         }
+    }
+}
+
+tasks.whenTaskAdded {
+    if (it.name.contains("Marker")) {
+        it.enabled = false
     }
 }
