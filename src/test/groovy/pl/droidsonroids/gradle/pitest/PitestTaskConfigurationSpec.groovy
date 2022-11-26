@@ -120,7 +120,7 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
             configParamName         | gradleConfigValue                        || expectedPitConfigValue
             "testPlugin"            | "testng"                                 || "testng"
             //junit5PluginVersion tested separately
-            "reportDir"             | new File("//tmp//foo")                   || new File("//tmp//foo").path    //due to issues on Windows
+            "reportDir"             | new File("//tmp//foo")                   || new File("//tmp//foo//release").path    //due to issues on Windows
             "targetClasses"         | ["a", "b"]                               || "a,b"
             "targetTests"           | ["t1", "t2"]                             || "t1,t2"
             "dependencyDistance"    | 42                                       || "42"
