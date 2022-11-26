@@ -212,7 +212,7 @@ class PitestPlugin implements Plugin<Project> {
         task.with {
             defaultFileForHistoryData.set(new File(project.buildDir, PIT_HISTORY_DEFAULT_FILE_NAME))
             testPlugin.set(pitestExtension.testPlugin)
-            reportDir.set(pitestExtension.reportDir)
+            reportDir.set(pitestExtension.reportDir.dir(variant.name))
             targetClasses.set(project.providers.provider {
                 log.debug("Setting targetClasses. project.getGroup: {}, class: {}", project.getGroup(), project.getGroup()?.class)
                 if (pitestExtension.targetClasses.isPresent()) {
