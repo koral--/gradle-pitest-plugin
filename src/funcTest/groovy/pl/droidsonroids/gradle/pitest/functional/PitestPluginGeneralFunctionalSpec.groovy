@@ -5,7 +5,6 @@ import nebula.test.functional.ExecutionResult
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import pl.droidsonroids.gradle.pitest.PitestPlugin
-import spock.lang.Ignore
 import spock.lang.Issue
 
 @CompileDynamic
@@ -14,7 +13,6 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
     @Rule
     protected TemporaryFolder tmpDir = new TemporaryFolder()
 
-    @Ignore("Bintray not accessible")
     void "enable PIT plugin when on classpath and pass plugin configuration to PIT"() {
         given:
             buildFile << getBasicGradlePitestConfig()
@@ -113,7 +111,7 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
             result.getStandardOutput().matches(/(?m)[\s\S]*java(.exe)* -XX:\+UnlockExperimentalVMOptions[\s\S]*/)
 
         and: "has source code available in report"
-            File htmlFileWithReportForHelloPit = new File(projectDir, "build//reports//pitest//gradle.pitest.test.hello//HelloPit.java.html")
+            File htmlFileWithReportForHelloPit = new File(projectDir, "build//reports//pitest//release//gradle.pitest.test.hello//HelloPit.java.html")
             htmlFileWithReportForHelloPit.text.contains("System.out.println(&#34;Mutation to survive&#34;);")
     }
 
@@ -179,6 +177,21 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
         and:
             result2.wasExecuted(':pitest')
             result2.getStandardOutput().contains("Task :pitestDebug FROM-CACHE")
+    }
+
+    @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/87")
+    void "should write reports for each variant separately"() {
+        given:
+            copyResources("testProjects/simpleKotlin", "")
+        and:
+            writeManifestFile()
+        when:
+            ExecutionResult result = runTasksSuccessfully('pitestRelease', 'pitestDebug')
+        then:
+            result.wasExecuted('pitestRelease')
+            result.wasExecuted('pitestDebug')
+            fileExists('build/reports/pitest/release')
+            fileExists('build/reports/pitest/debug')
     }
 
     private String quoteBackslashesInWindowsPath(File file) {
