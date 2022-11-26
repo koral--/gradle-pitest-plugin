@@ -8,6 +8,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Usage
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.provider.Provider
 import org.gradle.api.reporting.ReportingExtension
 import org.gradle.api.tasks.TaskCollection
@@ -66,9 +67,8 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             sourceDirs.from = collectSourceDirs(pitestTasks)
             additionalClasspath.from = collectClasspathDirs(pitestTasks)
 
-            Set<Project> projectsWithPitest = getProjectsWithPitestPlugin()
-            mutationFiles.from = collectMutationFiles(projectsWithPitest)
-            lineCoverageFiles.from = collectLineCoverageFiles(projectsWithPitest)
+            mutationFiles.from = collectMutationFiles(pitestTasks)
+            lineCoverageFiles.from = collectLineCoverageFiles(pitestTasks)
         }
     }
 
@@ -88,10 +88,6 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             return project.extensions.getByType(ReportingExtension).baseDir
         }
         return new File(project.buildDir, "reports")
-    }
-
-    private Set<Project> getProjectsWithPitestPlugin() {
-        return project.allprojects.findAll { prj -> prj.plugins.hasPlugin(PitestPlugin.PLUGIN_ID) }
     }
 
     private List<TaskCollection<PitestTask>> getAllPitestTasks() {
@@ -115,17 +111,23 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             }.collect(Collectors.toList())
     }
 
-    private static Set<Provider<File>> collectMutationFiles(Set<Project> pitestProjects) {
-        return pitestProjects.stream()
-            .map { prj -> prj.extensions.getByType(PitestPluginExtension) }
-            .map { extension -> extension.reportDir.file(MUTATION_FILE_NAME) }
+    private static Set<Provider<File>> collectMutationFiles(List<TaskCollection<PitestTask>> pitestTasks) {
+        return pitestTasks.stream()
+                .flatMap { tc ->
+                    tc.stream()
+                            .map { task -> task.reportDir }
+                }
+                .map { DirectoryProperty reportDir -> reportDir.file(MUTATION_FILE_NAME) }
             .collect(Collectors.toSet())
     }
 
-    private static Set<Provider<File>> collectLineCoverageFiles(Set<Project> pitestProjects) {
-        return pitestProjects.stream()
-            .map { prj -> prj.extensions.getByType(PitestPluginExtension) }
-            .map { extension -> extension.reportDir.file(LINE_COVERAGE_FILE_NAME) }
+    private static Set<Provider<File>> collectLineCoverageFiles(List<TaskCollection<PitestTask>> pitestTasks) {
+        return pitestTasks.stream()
+                .flatMap { tc ->
+                    tc.stream()
+                            .map { task -> task.reportDir }
+                }
+            .map { DirectoryProperty reportDir -> reportDir.file(LINE_COVERAGE_FILE_NAME) }
             .collect(Collectors.toSet())
     }
 
