@@ -1,3 +1,9 @@
+# 0.2.11 - 2022-11-27
+
+- Integrate upstream changes 12857274f550d5a21d570621934bb86d5af16c0f
+- Update dependency versions
+- Use separate output directories for each task [#87](https://github.com/koral--/gradle-pitest-plugin/issue/87)
+
 # 0.2.10 - 2022-10-20
 
 - Update dependency versions
