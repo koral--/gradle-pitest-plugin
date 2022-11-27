@@ -26,7 +26,7 @@ class PitestAggregatorPluginTest extends Specification {
         and:
             triggerEvaluateForAggregateTask()
         then:
-            project.configurations.named("pitestReport").get().dependencies.find { dep ->
+            project.configurations.named("pitestReport").get().incoming.dependencies.find { dep ->
                 dep.version == PitestPlugin.DEFAULT_PITEST_VERSION
             }
     }
@@ -42,12 +42,13 @@ class PitestAggregatorPluginTest extends Specification {
         and:
             triggerEvaluateForAggregateTask()
         then:
-            project.configurations.named(PitestAggregatorPlugin.PITEST_REPORT_AGGREGATE_CONFIGURATION_NAME).get().dependencies.find { dep ->
+            project.configurations.named(PitestAggregatorPlugin.PITEST_REPORT_AGGREGATE_CONFIGURATION_NAME).get().incoming.dependencies.find { dep ->
                 dep.version == testPitestVersion
             }
     }
 
 //    void "use pitest version from subproject project configuration"() {}    //TODO: Can be implemented with ProjectBuilder? withParent()?
+//    void "use configured charset in aggregation"() {} //TODO: Can be tested in "unit" way?
 
     private void assertThatTasksAreInGroup(List<String> taskNames, String group) {
         taskNames.each { String taskName ->
