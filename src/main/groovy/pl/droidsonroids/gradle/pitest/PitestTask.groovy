@@ -40,6 +40,8 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.options.Option
 
+import java.nio.charset.Charset
+
 /**
  * Gradle task implementation for Pitest.
  */
@@ -227,6 +229,14 @@ class PitestTask extends JavaExec {
 
     @Input
     @Optional
+    final Property<Charset> inputEncoding
+
+    @Input
+    @Optional
+    final Property<Charset> outputEncoding
+
+    @Input
+    @Optional
     final ListProperty<String> features
 
     @Incubating
@@ -293,23 +303,25 @@ class PitestTask extends JavaExec {
         useAdditionalClasspathFile = of.property(Boolean)
         additionalClasspathFile = of.fileProperty()
         features = of.listProperty(String)
+        inputEncoding = of.property(Charset)
+        outputEncoding = of.property(Charset)
     }
 
     @Input
     String getAdditionalClasspathFilePath() {
-        return additionalClasspathFile.asFile.get().absolutePath
+        return additionalClasspathFile.asFile.get().relativePath(project.rootProject.rootDir)
     }
 
     @Input
     @Optional
     String getHistoryInputLocationPath() {
         //?. operator doesn't work with Gradle Providers
-        return historyInputLocation.isPresent() ? historyInputLocation.asFile.get().absolutePath : null
+        return historyInputLocation.isPresent() ? historyInputLocation.asFile.get().relativePath(project.rootProject.rootDir) : null
     }
 
     @Input
     String getDefaultFileForHistoryDataPath() {
-        return defaultFileForHistoryData.asFile.get().absolutePath
+        return defaultFileForHistoryData.asFile.get().relativePath(project.rootProject.rootDir)
     }
 
     @Input
@@ -373,6 +385,8 @@ class PitestTask extends JavaExec {
         map['jvmPath'] = getJvmPath()?.getOrNull()?.asFile?.absolutePath
         map['maxSurviving'] = optionalPropertyAsString(maxSurviving)
         map['useClasspathJar'] = optionalPropertyAsString(useClasspathJar)
+        map['inputEncoding'] = optionalPropertyAsString(inputEncoding)
+        map['outputEncoding'] = optionalPropertyAsString(outputEncoding)
         map['features'] = (features.getOrElse([]) + (additionalFeatures ?: []))?.join(',')
         map.putAll(prepareMapWithClasspathConfiguration())
         map.putAll(prepareMapWithIncrementalAnalysisConfiguration())
