@@ -46,7 +46,6 @@ class ExternalLibrariesFunctionalSpec extends AbstractPitestFunctionalSpec {
         then:
             result.wasExecuted('pitest')
         and:
-            result.standardOutput.contains('--testPlugin=junit5')
             result.standardOutput.contains('Generated 1 mutations Killed 1 (100%)')
     }
 
