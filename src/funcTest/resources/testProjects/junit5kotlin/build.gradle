@@ -1,6 +1,6 @@
 buildscript {
-    ext.kotlin_version = '1.5.21'
-    ext.junit5Version = '5.7.1'
+    ext.kotlin_version = '1.7.21'
+    ext.junit5Version = '5.9.1'
 
     repositories {
         google()
@@ -9,7 +9,7 @@ buildscript {
 
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "de.mannodermaus.gradle.plugins:android-junit5:1.7.1.1"
+        classpath "de.mannodermaus.gradle.plugins:android-junit5:1.8.2.1"
     }
 }
 
@@ -34,7 +34,7 @@ dependencies {
 }
 
 pitest {
-    junit5PluginVersion = "0.14"
+    junit5PluginVersion = "1.0.0"
     avoidCallsTo = ["kotlin.jvm.internal"]
     mutators = ["STRONGER"]
     targetClasses = ['pitest.test.*']  //by default "${project.group}.*"
@@ -45,10 +45,10 @@ pitest {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 32
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 30
+        targetSdkVersion 32
     }
     lintOptions {
         //ignore missing lint database

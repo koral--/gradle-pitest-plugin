@@ -4,7 +4,10 @@ import org.gradle.api.Incubating
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.workers.WorkParameters
+
+import java.nio.charset.Charset
 
 @Incubating
 interface AggregateReportWorkParameters extends WorkParameters {
@@ -20,5 +23,9 @@ interface AggregateReportWorkParameters extends WorkParameters {
     ConfigurableFileCollection getMutationFiles()
 
     ConfigurableFileCollection getLineCoverageFiles()
+
+    Property<Charset> getInputCharset()
+
+    Property<Charset> getOutputCharset()
 
 }

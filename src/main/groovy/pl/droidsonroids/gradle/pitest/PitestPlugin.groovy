@@ -37,6 +37,7 @@ import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.reporting.ReportingExtension
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.util.GradleVersion
 import org.gradle.util.VersionNumber
 
 import java.util.concurrent.Callable
@@ -50,7 +51,7 @@ import static org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_
 @CompileDynamic
 class PitestPlugin implements Plugin<Project> {
 
-    public final static String DEFAULT_PITEST_VERSION = '1.7.0'
+    public final static String DEFAULT_PITEST_VERSION = '1.9.4'
     public final static String PITEST_TASK_GROUP = VERIFICATION_GROUP
     public final static String PITEST_TASK_NAME = "pitest"
     public final static String PITEST_CONFIGURATION_NAME = 'pitest'
@@ -149,6 +150,8 @@ class PitestPlugin implements Plugin<Project> {
                 group = PITEST_TASK_GROUP
                 shouldRunAfter("test${variant.name.capitalize()}UnitTest")
             }
+            suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
+
             variantTask.dependsOn "compile${variant.name.capitalize()}UnitTestSources"
             globalTask.dependsOn variantTask
         }
@@ -290,6 +293,8 @@ class PitestPlugin implements Plugin<Project> {
             maxSurviving.set(pitestExtension.maxSurviving)
             useClasspathJar.set(pitestExtension.useClasspathJar)
             features.set(pitestExtension.features)
+            inputEncoding.set(pitestExtension.inputCharset)
+            outputEncoding.set(pitestExtension.outputCharset)
         }
     }
 
@@ -299,10 +304,6 @@ class PitestPlugin implements Plugin<Project> {
             log.info("Using PIT: $pitestVersion")
             pitest "org.pitest:pitest-command-line:$pitestVersion"
             if (pitestExtension.junit5PluginVersion.isPresent()) {
-                if (!pitestExtension.testPlugin.isPresent()) {
-                    log.info("Implicitly using JUnit 5 plugin for PIT with version defined in 'junit5PluginVersion'")
-                    pitestExtension.testPlugin.set(PITEST_JUNIT5_PLUGIN_NAME)
-                }
                 if (pitestExtension.testPlugin.isPresent() && pitestExtension.testPlugin.get() != PITEST_JUNIT5_PLUGIN_NAME) {
                     log.warn("Specified 'junit5PluginVersion', but other plugin is configured in 'testPlugin' for PIT: '${pitestExtension.testPlugin.get()}'")
                 }
@@ -334,6 +335,24 @@ class PitestPlugin implements Plugin<Project> {
         mockableAndroidJarFilename += '.jar'
 
         return new File(mockableJarDirectory, mockableAndroidJarFilename)
+    }
+
+    private void suppressPassingDeprecatedTestPluginForNewerPitVersions(PitestTask pitestTask) {
+        if (pitestExtension.testPlugin.isPresent()) {
+            log.warn("DEPRECATION WARNING. `testPlugin` is deprecated starting with GPP 1.7.4. It is also not used starting with PIT 1.6.7 (to be removed in 1.8.0).")
+            String configuredPitVersion = pitestExtension.pitestVersion.get()
+            try {
+                final GradleVersion minimalPitVersionNotNeedingTestPluginProperty = GradleVersion.version("1.6.7")
+                if (GradleVersion.version(configuredPitVersion) >= minimalPitVersionNotNeedingTestPluginProperty) {
+                    log.info("Passing '--testPlugin' to PIT disabled for PIT 1.6.7+. See https://github.com/szpak/gradle-pitest-plugin/issues/277")
+                    pitestTask.testPlugin.set((String)null)
+                }
+            } catch (IllegalArgumentException e) {
+                log.warn("Error during PIT versions comparison. Is '$configuredPitVersion' really valid? If yes, please report that case. " +
+                        "Assuming PIT version is newer than 1.6.7.")
+                log.warn("Original exception: ${e.class.name}:${e.message}")
+            }
+        }
     }
 
 }

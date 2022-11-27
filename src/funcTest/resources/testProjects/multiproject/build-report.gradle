@@ -35,16 +35,16 @@ apply plugin: "pl.droidsonroids.pitest.aggregator"
         apply plugin: 'pl.droidsonroids.pitest'
 
         android {
-            compileSdkVersion 30
+            compileSdkVersion 32
             defaultConfig {
                 minSdkVersion 10
-                targetSdkVersion 30
+                targetSdkVersion 32
             }
 
         }
 
         dependencies {
-            api 'org.slf4j:slf4j-api:1.7.32'
+            api 'org.slf4j:slf4j-api:2.0.5'
             testImplementation 'junit:junit:4.13.2'
         }
 
