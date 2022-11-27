@@ -24,10 +24,10 @@ dependencies {
 }
 
 android {
-    compileSdkVersion 30
+    compileSdkVersion 32
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 30
+        targetSdkVersion 32
     }
     lintOptions {
         //ignore missing lint database
