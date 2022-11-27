@@ -28,6 +28,8 @@ import org.gradle.api.provider.Property
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 
+import java.nio.charset.Charset
+
 /**
  * Extension class with configurable parameters for Pitest plugin.
  *
@@ -42,12 +44,16 @@ class PitestPluginExtension {
     /**
      * Specifies what test plugin to use.
      *
-     * Prior to 1.3.0 this was autodetected, now it has to be specified. The junit plugin is used by default.
+     * Prior to 1.3.0 this was auto detected. Up to 1.6.8 it has to be specified. With 1.6.7+ is not needed anymore (test plugins are auto detected)
+     * and it is deprecated in PIT. To be removed in 1.8.0.
      *
      * For using with JUnit 5 please see: junit5PluginVersion
      *
+     * Related issue: https://github.com/szpak/gradle-pitest-plugin/issues/277
+     *
      * @since 1.3.0
      */
+    @Deprecated
     final Property<String> testPlugin
 
     /**
@@ -162,8 +168,11 @@ class PitestPluginExtension {
     @Incubating
     final Property<Boolean> useClasspathJar //new in PIT 1.4.2 (GPP 1.4.6)
 
+    final Property<Charset> inputCharset    //new in PIT 1.8.1 as inputEncoding (GPP 1.9.0)
+    final Property<Charset> outputCharset   //new in PIT 1.8.1 as outputEncoding (GPP 1.9.0)
+
     /**
-     * Turnes on/off features in PIT itself and its plugins.
+     * Turns on/off features in PIT itself and its plugins.
      *
      * Some details: https://github.com/hcoles/pitest/releases/tag/pitest-parent-1.2.1
      *
@@ -245,6 +254,8 @@ class PitestPluginExtension {
         pluginConfiguration = nullMapPropertyOf(p, String, String)
         maxSurviving = of.property(Integer)
         useClasspathJar = of.property(Boolean)
+        inputCharset = of.property(Charset)
+        outputCharset = of.property(Charset)
         features = nullListPropertyOf(p, String)
         fileExtensionsToFilter = nullListPropertyOf(p, String)
         excludeMockableAndroidJar = of.property(Boolean)
@@ -277,6 +288,16 @@ class PitestPluginExtension {
      */
     void setWithHistory(Boolean withHistory) {
         this.enableDefaultIncrementalAnalysis.set(withHistory)
+    }
+
+    @Deprecated //Alias for inputCharset to keep naming compatibility with PIT
+    void setInputEncoding(Charset inputCharset) {
+        this.inputCharset.set(inputCharset)
+    }
+
+    @Deprecated //Alias for outputCharset to keep naming compatibility with PIT
+    void setOutputEncoding(Charset outputCharset) {
+        this.outputCharset.set(outputCharset)
     }
 
     private static <T> SetProperty<T> nullSetPropertyOf(Project p, Class<T> clazz) {

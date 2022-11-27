@@ -7,11 +7,14 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Usage
-import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.reporting.ReportingExtension
 import org.gradle.api.tasks.TaskCollection
 
+import java.util.function.Consumer
 import java.util.stream.Collectors
 
 /**
@@ -66,21 +69,29 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             sourceDirs.from = collectSourceDirs(pitestTasks)
             additionalClasspath.from = collectClasspathDirs(pitestTasks)
 
-            Set<Project> projectsWithPitest = getProjectsWithPitestPlugin()
-            mutationFiles.from = collectMutationFiles(projectsWithPitest)
-            lineCoverageFiles.from = collectLineCoverageFiles(projectsWithPitest)
+            mutationFiles.from = collectMutationFiles(pitestTasks)
+            lineCoverageFiles.from = collectLineCoverageFiles(pitestTasks)
+            findPluginExtension().ifPresent({ PitestPluginExtension extension ->
+                inputCharset.set(extension.inputCharset)
+                outputCharset.set(extension.outputCharset)
+            } as Consumer<PitestPluginExtension>)   //Simplify with Groovy 3+
         }
     }
 
     private void addPitAggregateReportDependency(Configuration pitestReportConfiguration) {
-        Optional<PitestPluginExtension> maybeExtension = Optional.ofNullable(project.extensions.findByType(PitestPluginExtension))
-            .map { extension -> Optional.of(extension) }   //Optional::of with Groovy 3
-            .orElseGet { findPitestExtensionInSubprojects(project) }
-        String pitestVersion = maybeExtension
-            .map { extension -> extension.pitestVersion.get() }
-            .orElse(PitestPlugin.DEFAULT_PITEST_VERSION)
+        pitestReportConfiguration.withDependencies { dependencies ->
+            String pitestVersion = findPluginExtension()
+                    .map { extension -> extension.pitestVersion.get() }
+                    .orElse(PitestPlugin.DEFAULT_PITEST_VERSION)
 
-        pitestReportConfiguration.dependencies.add(project.dependencies.create("org.pitest:pitest-aggregator:$pitestVersion"))
+            dependencies.add(project.dependencies.create("org.pitest:pitest-aggregator:$pitestVersion"))
+        }
+    }
+
+    private Optional<PitestPluginExtension> findPluginExtension() {
+        return Optional.ofNullable(project.extensions.findByType(PitestPluginExtension))
+                .map { extension -> Optional.of(extension) }   //Optional::of with Groovy 3
+                .orElseGet { findPitestExtensionInSubprojects(project) }
     }
 
     private File getReportBaseDirectory() {
@@ -90,15 +101,11 @@ class PitestAggregatorPlugin implements Plugin<Project> {
         return new File(project.buildDir, "reports")
     }
 
-    private Set<Project> getProjectsWithPitestPlugin() {
-        return project.allprojects.findAll { prj -> prj.plugins.hasPlugin(PitestPlugin.PLUGIN_ID) }
-    }
-
     private List<TaskCollection<PitestTask>> getAllPitestTasks() {
         return project.allprojects.collect { p -> p.tasks.withType(PitestTask) }
     }
 
-    private static List<ConfigurableFileCollection> collectSourceDirs(List<TaskCollection<PitestTask>> pitestTasks) {
+    private static List<? extends FileCollection> collectSourceDirs(List<TaskCollection<PitestTask>> pitestTasks) {
         return pitestTasks.stream()
             .flatMap { tc ->
                 tc.stream()
@@ -106,7 +113,7 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             }.collect(Collectors.toList())
     }
 
-    private static List<ConfigurableFileCollection> collectClasspathDirs(List<TaskCollection<PitestTask>> pitestTasks) {
+    private static List<? extends FileCollection> collectClasspathDirs(List<TaskCollection<PitestTask>> pitestTasks) {
         return pitestTasks.stream()
             .flatMap { tc ->
                 tc.stream()
@@ -115,17 +122,23 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             }.collect(Collectors.toList())
     }
 
-    private static Set<Provider<File>> collectMutationFiles(Set<Project> pitestProjects) {
-        return pitestProjects.stream()
-            .map { prj -> prj.extensions.getByType(PitestPluginExtension) }
-            .map { extension -> extension.reportDir.file(MUTATION_FILE_NAME) }
+    private static Set<Provider<RegularFile>> collectMutationFiles(List<TaskCollection<PitestTask>> pitestTasks) {
+        return pitestTasks.stream()
+                .flatMap { tc ->
+                    tc.stream()
+                            .map { task -> task.reportDir }
+                }
+                .map { DirectoryProperty reportDir -> reportDir.file(MUTATION_FILE_NAME) }
             .collect(Collectors.toSet())
     }
 
-    private static Set<Provider<File>> collectLineCoverageFiles(Set<Project> pitestProjects) {
-        return pitestProjects.stream()
-            .map { prj -> prj.extensions.getByType(PitestPluginExtension) }
-            .map { extension -> extension.reportDir.file(LINE_COVERAGE_FILE_NAME) }
+    private static Set<Provider<RegularFile>> collectLineCoverageFiles(List<TaskCollection<PitestTask>> pitestTasks) {
+        return pitestTasks.stream()
+                .flatMap { tc ->
+                    tc.stream()
+                            .map { task -> task.reportDir }
+                }
+            .map { DirectoryProperty reportDir -> reportDir.file(LINE_COVERAGE_FILE_NAME) }
             .collect(Collectors.toSet())
     }
 
