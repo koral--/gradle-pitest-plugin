@@ -101,6 +101,10 @@ class PitestTask extends JavaExec {
 
     @Input
     @Optional
+    final Property<String> verbosity
+
+    @Input
+    @Optional
     final Property<BigDecimal> timeoutFactor
 
     @Input
@@ -270,6 +274,7 @@ class PitestTask extends JavaExec {
         excludedTestClasses = of.setProperty(String)
         avoidCallsTo = of.setProperty(String)
         verbose = of.property(Boolean)
+        verbosity = of.property(String)
         timeoutFactor = of.property(BigDecimal)
         timeoutConstInMillis = of.property(Integer)
         childProcessJvmArgs = of.listProperty(String)
@@ -361,6 +366,7 @@ class PitestTask extends JavaExec {
         map['excludedTestClasses'] = optionalCollectionAsString(excludedTestClasses)
         map['avoidCallsTo'] = optionalCollectionAsString(avoidCallsTo)
         map['verbose'] = optionalPropertyAsString(verbose)
+        map['verbosity'] = optionalPropertyAsString(verbosity)
         map['timeoutFactor'] = optionalPropertyAsString(timeoutFactor)
         map['timeoutConst'] = optionalPropertyAsString(timeoutConstInMillis)
         map['jvmArgs'] = optionalCollectionAsString(childProcessJvmArgs)

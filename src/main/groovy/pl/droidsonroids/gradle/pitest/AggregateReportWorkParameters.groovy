@@ -28,4 +28,10 @@ interface AggregateReportWorkParameters extends WorkParameters {
 
     Property<Charset> getOutputCharset()
 
+    Property<Integer> getTestStrengthThreshold()
+
+    Property<Integer> getMutationThreshold()
+
+    Property<Integer> getMaxSurviving()
+
 }
