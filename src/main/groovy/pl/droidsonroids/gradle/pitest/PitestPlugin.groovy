@@ -51,7 +51,7 @@ import static org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_
 @CompileDynamic
 class PitestPlugin implements Plugin<Project> {
 
-    public final static String DEFAULT_PITEST_VERSION = '1.9.4'
+    public final static String DEFAULT_PITEST_VERSION = '1.9.11'
     public final static String PITEST_TASK_GROUP = VERIFICATION_GROUP
     public final static String PITEST_TASK_NAME = "pitest"
     public final static String PITEST_CONFIGURATION_NAME = 'pitest'
@@ -95,6 +95,7 @@ class PitestPlugin implements Plugin<Project> {
         pitestExtension.pitestVersion.set(DEFAULT_PITEST_VERSION)
         pitestExtension.fileExtensionsToFilter.set(DEFAULT_FILE_EXTENSIONS_TO_FILTER_FROM_CLASSPATH)
         pitestExtension.useClasspathFile.set(false)
+        pitestExtension.verbosity.set("NO_SPINNER")
 
         project.pluginManager.apply(BasePlugin)
 
@@ -243,6 +244,7 @@ class PitestPlugin implements Plugin<Project> {
             excludedTestClasses.set(pitestExtension.excludedTestClasses)
             avoidCallsTo.set(pitestExtension.avoidCallsTo)
             verbose.set(pitestExtension.verbose)
+            verbosity.set(pitestExtension.verbosity)
             timeoutFactor.set(pitestExtension.timeoutFactor)
             timeoutConstInMillis.set(pitestExtension.timeoutConstInMillis)
             childProcessJvmArgs.set(pitestExtension.jvmArgs)
