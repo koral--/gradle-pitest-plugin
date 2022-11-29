@@ -19,10 +19,11 @@ import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.BaseExtension
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.TestPlugin
-import com.android.build.gradle.api.AndroidSourceSet
+import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.gradle.api.BaseVariant
 import com.android.build.gradle.internal.api.TestedVariant
 import com.android.builder.model.AndroidProject
+import com.vdurmont.semver4j.Semver
 import groovy.transform.CompileDynamic
 import groovy.transform.PackageScope
 import org.gradle.api.Plugin
@@ -38,7 +39,6 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.reporting.ReportingExtension
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.util.GradleVersion
-import org.gradle.util.VersionNumber
 
 import java.util.concurrent.Callable
 
@@ -63,7 +63,7 @@ class PitestPlugin implements Plugin<Project> {
 
     @SuppressWarnings("FieldName")
     private final static Logger log = Logging.getLogger(PitestPlugin)
-    private final static VersionNumber ANDROID_GRADLE_PLUGIN_VERSION_NUMBER = VersionNumber.parse(ANDROID_GRADLE_PLUGIN_VERSION)
+    private final static Semver ANDROID_GRADLE_PLUGIN_VERSION_NUMBER = new Semver(ANDROID_GRADLE_PLUGIN_VERSION)
 
     @PackageScope
     //visible for testing
@@ -80,7 +80,7 @@ class PitestPlugin implements Plugin<Project> {
     }
 
     static JavaCompile getJavaCompileTask(BaseVariant variant) {
-        if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER >= VersionNumber.parse("3.3")) {
+        if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER >= new Semver("3.3.0")) {
             return variant.javaCompileProvider.get()
         } else {
             return variant.javaCompile
@@ -134,7 +134,7 @@ class PitestPlugin implements Plugin<Project> {
             PitestTask variantTask = project.tasks.create("${PITEST_TASK_NAME}${variant.name.capitalize()}", PitestTask)
 
             Task mockableAndroidJarTask
-            if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER < new VersionNumber(3, 2, 0, null)) {
+            if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER < new Semver("3.2.0")) {
                 mockableAndroidJarTask = project.tasks.findByName("mockableAndroidJar")
                 configureTaskDefault(variantTask, variant, getMockableAndroidJar(project.android))
             } else {
