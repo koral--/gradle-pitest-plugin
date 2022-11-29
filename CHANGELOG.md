@@ -1,3 +1,9 @@
+# 0.2.12 - 2022-11-29
+
+- Integrate upstream changes dc804a7d61f059d1eecd6744dd7526edbcaf4e8c
+- Update dependency versions
+- Replace deprecated VersionNumber with Semver4j
+
 # 0.2.11 - 2022-11-27
 
 - Integrate upstream changes 12857274f550d5a21d570621934bb86d5af16c0f
