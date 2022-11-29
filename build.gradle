@@ -14,7 +14,7 @@ plugins {
 
 sourceCompatibility = 1.8
 
-ext.pitestAggregatorVersion = "1.9.4"   //Must be equal to default PIT version in PitestPlugin
+ext.pitestAggregatorVersion = "1.9.11"   //Must be equal to default PIT version in PitestPlugin
 
 repositories {
     mavenCentral()
@@ -30,6 +30,7 @@ dependencies {
     implementation localGroovy()
     compileOnly "org.pitest:pitest-aggregator:$pitestAggregatorVersion"
     implementation 'com.android.tools.build:gradle:7.3.1'
+    implementation 'com.vdurmont:semver4j:3.1.0'
 
     testImplementation('org.spockframework:spock-core:2.3-groovy-3.0') {
         exclude group: 'org.codehaus.groovy'
