@@ -196,6 +196,10 @@ class PitestPlugin implements Plugin<Project> {
             } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 4) {
                 from(project.configurations["compile"])
                 from(project.configurations["testCompile"])
+            } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4) {
+                from(project.configurations["${variant.name}UnitTestRuntimeClasspath"].copyRecursive { configuration ->
+                    configuration.properties.dependencyProject == null
+                })
             }
             from(project.configurations["pitestRuntimeOnly"])
             from(project.files("${project.buildDir}/intermediates/sourceFolderJavaResources/${variant.dirName}"))
