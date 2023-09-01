@@ -1,3 +1,8 @@
+# 0.2.13 - 2023-09-01
+
+- Extend pitest test runtime classpath [#95](https://github.com/koral--/gradle-pitest-plugin/issue/95)
+- Update dependency versions
+
 # 0.2.12 - 2022-11-29
 
 - Integrate upstream changes dc804a7d61f059d1eecd6744dd7526edbcaf4e8c
