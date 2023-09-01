@@ -142,6 +142,7 @@ gradlePlugin {
             tags.addAll('pitest', 'android', 'mutation testing')
             implementationClass = 'pl.droidsonroids.gradle.pitest.PitestAggregatorPlugin'
             displayName = 'Android Gradle pitest aggregator plugin'
+            description = POM_DESCRIPTION
         }
     }
 }
