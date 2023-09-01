@@ -2,14 +2,14 @@ import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.project.ProjectInternal
 
 plugins {
-    id 'com.github.ben-manes.versions' version '0.44.0'
+    id 'com.github.ben-manes.versions' version '0.47.0'
     id 'groovy'
     id 'maven-publish'
     id 'codenarc'
     id 'signing'
     id 'java-gradle-plugin'
-    id 'com.gradle.plugin-publish' version '0.20.0'
-    id 'com.vanniktech.maven.publish' version '0.18.0'
+    id 'com.gradle.plugin-publish' version '1.2.1'
+    id 'com.vanniktech.maven.publish' version '0.25.3'
 }
 
 sourceCompatibility = 1.8
@@ -39,13 +39,13 @@ dependencies {
     testImplementation('org.spockframework:spock-junit4:2.3-groovy-3.0') {
         exclude group: 'org.codehaus.groovy'
     }
-    testImplementation 'net.bytebuddy:byte-buddy:1.12.19' //for Spying in Spock
+    testImplementation 'net.bytebuddy:byte-buddy:1.14.7' //for Spying in Spock
 
     funcTestImplementation sourceSets.main.output
     //to make production plugin classes visible in functional tests (it's not in testImplementation configuration)
     funcTestImplementation configurations.testImplementation
     funcTestRuntimeOnly configurations.testRuntimeOnly
-    funcTestImplementation('com.netflix.nebula:nebula-test:10.3.0') {
+    funcTestImplementation('com.netflix.nebula:nebula-test:10.5.0') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
     def toolingApiBuildersJar = (project as ProjectInternal).services.get(ModuleRegistry.class)
@@ -56,7 +56,7 @@ dependencies {
     testRuntimeOnly(files(toolingApiBuildersJar))
 }
 
-task funcTest(type: Test) {
+tasks.register('funcTest', Test) {
     description = 'Run the functional tests.'
     group = 'Verification'
     testClassesDirs = sourceSets.funcTest.output.classesDirs
@@ -72,7 +72,7 @@ check.shouldRunAfter funcTest
 check.dependsOn funcTestClasses     //or more generically: tasks.withType(AbstractCompile)
 publishPlugins.dependsOn funcTest, check
 
-task testReport(type: TestReport) {
+tasks.register('testReport', TestReport) {
     destinationDir = file("$buildDir/reports/allTests")
     reportOn test, funcTest
 }
@@ -123,31 +123,23 @@ tasks.withType(CodeNarc) { codeNarcTask ->
     })
 }
 
-pluginBundle {
+gradlePlugin {
     website = POM_URL
     vcsUrl = POM_URL
-    tags = ['pitest', 'android', 'mutation testing']
-    description = POM_DESCRIPTION
-    version = VERSION_NAME
-    group = GROUP
-
-    plugins {
-        pitest {
-            id = 'pl.droidsonroids.pitest'
-            displayName = POM_NAME
-        }
-    }
-}
-
-gradlePlugin {
     testSourceSets sourceSets.funcTest
     plugins {
         pitest {
             id = 'pl.droidsonroids.pitest'
             implementationClass = 'pl.droidsonroids.gradle.pitest.PitestPlugin'
+            tags.addAll('pitest', 'android', 'mutation testing')
+            displayName = POM_NAME
+            description = POM_DESCRIPTION
+            version = VERSION_NAME
+            group = GROUP
         }
         pitestAggregator {
             id = 'pl.droidsonroids.pitest.aggregator'
+            tags.addAll('pitest', 'android', 'mutation testing')
             implementationClass = 'pl.droidsonroids.gradle.pitest.PitestAggregatorPlugin'
             displayName = 'Android Gradle pitest aggregator plugin'
         }
