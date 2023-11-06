@@ -144,6 +144,11 @@ class PitestPlugin implements Plugin<Project> {
         variants.all { BaseVariant variant ->
             PitestTask variantTask = project.tasks.create("${PITEST_TASK_NAME}${variant.name.capitalize()}", PitestTask)
 
+            boolean includeMockableAndroidJar = !pitestExtension.excludeMockableAndroidJar.getOrElse(false)
+            if (includeMockableAndroidJar) {
+                addMockableAndroidJarDependencies()
+            }
+
             Task mockableAndroidJarTask
             if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER < new Semver("3.2.0")) {
                 mockableAndroidJarTask = project.tasks.findByName("mockableAndroidJar")
@@ -153,7 +158,7 @@ class PitestPlugin implements Plugin<Project> {
                 configureTaskDefault(variantTask, variant, mockableAndroidJarTask.outputJar)
             }
 
-            if (!pitestExtension.excludeMockableAndroidJar.getOrElse(false)) {
+            if (includeMockableAndroidJar) {
                 variantTask.dependsOn mockableAndroidJarTask
             }
 
@@ -166,6 +171,18 @@ class PitestPlugin implements Plugin<Project> {
 
             variantTask.dependsOn "compile${variant.name.capitalize()}UnitTestSources"
             globalTask.dependsOn variantTask
+        }
+    }
+
+    private void addMockableAndroidJarDependencies() {
+        //according to https://search.maven.org/artifact/com.google.android/android/4.1.1.4/jar
+        project.buildscript.dependencies {
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "org.json:json:20080701"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "xpp3:xpp3:1.1.4c"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "xerces:xmlParserAPIs:2.6.2"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "org.khronos:opengl-api:gl1.1-android-2.1_r1"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "org.apache.httpcomponents:httpclient:4.0.1"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "commons-logging:commons-logging:1.1.1"
         }
     }
 
