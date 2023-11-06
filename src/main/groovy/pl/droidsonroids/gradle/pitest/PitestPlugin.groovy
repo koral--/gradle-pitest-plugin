@@ -15,17 +15,18 @@
  */
 package pl.droidsonroids.gradle.pitest
 
+import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.BaseExtension
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.TestPlugin
-import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.gradle.api.BaseVariant
 import com.android.build.gradle.internal.api.TestedVariant
 import com.android.builder.model.AndroidProject
 import com.vdurmont.semver4j.Semver
 import groovy.transform.CompileDynamic
 import groovy.transform.PackageScope
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -51,9 +52,10 @@ import static org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_
 @CompileDynamic
 class PitestPlugin implements Plugin<Project> {
 
-    public final static String DEFAULT_PITEST_VERSION = '1.9.11'
+    public final static String DEFAULT_PITEST_VERSION = '1.15.0'
     public final static String PITEST_TASK_GROUP = VERIFICATION_GROUP
     public final static String PITEST_TASK_NAME = "pitest"
+    public final static String PITEST_REPORT_DIRECTORY_NAME = 'pitest'
     public final static String PITEST_CONFIGURATION_NAME = 'pitest'
     public final static String PITEST_TEST_COMPILE_CONFIGURATION_NAME = 'pitestTestCompile'
 
@@ -69,7 +71,6 @@ class PitestPlugin implements Plugin<Project> {
     //visible for testing
     final static String PIT_HISTORY_DEFAULT_FILE_NAME = 'pitHistory.txt'
     private final static String PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME = "pitClasspath"
-    public final static String PITEST_REPORT_DIRECTORY_NAME = 'pitest'
     public static final String PLUGIN_ID = 'pl.droidsonroids.pitest'
 
     private Project project
@@ -89,6 +90,7 @@ class PitestPlugin implements Plugin<Project> {
 
     void apply(Project project) {
         this.project = project
+        failWithMeaningfulErrorMessageOnUnsupportedConfigurationInRootProjectBuildScript()
         createConfigurations()
 
         pitestExtension = project.extensions.create("pitest", PitestPluginExtension, project)
@@ -96,6 +98,7 @@ class PitestPlugin implements Plugin<Project> {
         pitestExtension.fileExtensionsToFilter.set(DEFAULT_FILE_EXTENSIONS_TO_FILTER_FROM_CLASSPATH)
         pitestExtension.useClasspathFile.set(false)
         pitestExtension.verbosity.set("NO_SPINNER")
+        pitestExtension.addJUnitPlatformLauncher.set(true)
 
         project.pluginManager.apply(BasePlugin)
 
@@ -121,6 +124,14 @@ class PitestPlugin implements Plugin<Project> {
         }
     }
 
+    private void failWithMeaningfulErrorMessageOnUnsupportedConfigurationInRootProjectBuildScript() {
+        if (project.rootProject.buildscript.configurations.findByName(PITEST_CONFIGURATION_NAME) != null) {
+            throw new GradleException("The '${PITEST_CONFIGURATION_NAME}' buildscript configuration found in the root project. " +
+                    "This is no longer supported in 1.5.0+ and has to be changed to the regular (sub)project configuration. " +
+                    "See the project FAQ for migration details.")
+        }
+    }
+
     @SuppressWarnings("BuilderMethodWithSideEffects")
     private void createPitestTasks(DefaultDomainObjectSet<? extends BaseVariant> variants) {
         Task globalTask = project.tasks.create(PITEST_TASK_NAME)
@@ -133,6 +144,11 @@ class PitestPlugin implements Plugin<Project> {
         variants.all { BaseVariant variant ->
             PitestTask variantTask = project.tasks.create("${PITEST_TASK_NAME}${variant.name.capitalize()}", PitestTask)
 
+            boolean includeMockableAndroidJar = !pitestExtension.excludeMockableAndroidJar.getOrElse(false)
+            if (includeMockableAndroidJar) {
+                addMockableAndroidJarDependencies()
+            }
+
             Task mockableAndroidJarTask
             if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER < new Semver("3.2.0")) {
                 mockableAndroidJarTask = project.tasks.findByName("mockableAndroidJar")
@@ -142,7 +158,7 @@ class PitestPlugin implements Plugin<Project> {
                 configureTaskDefault(variantTask, variant, mockableAndroidJarTask.outputJar)
             }
 
-            if (!pitestExtension.excludeMockableAndroidJar.getOrElse(false)) {
+            if (includeMockableAndroidJar) {
                 variantTask.dependsOn mockableAndroidJarTask
             }
 
@@ -155,6 +171,18 @@ class PitestPlugin implements Plugin<Project> {
 
             variantTask.dependsOn "compile${variant.name.capitalize()}UnitTestSources"
             globalTask.dependsOn variantTask
+        }
+    }
+
+    private void addMockableAndroidJarDependencies() {
+        //according to https://search.maven.org/artifact/com.google.android/android/4.1.1.4/jar
+        project.buildscript.dependencies {
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "org.json:json:20080701"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "xpp3:xpp3:1.1.4c"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "xerces:xmlParserAPIs:2.6.2"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "org.khronos:opengl-api:gl1.1-android-2.1_r1"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "org.apache.httpcomponents:httpclient:4.0.1"
+            "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "commons-logging:commons-logging:1.1.1"
         }
     }
 
@@ -181,7 +209,7 @@ class PitestPlugin implements Plugin<Project> {
                 from(mockableAndroidJar)
             }
 
-            if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 3) {
+            if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 3 && project.findProperty("android.enableJetifier") != "true") {
                 if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.minor < 3) {
                     from(project.configurations["${variant.name}CompileClasspath"].copyRecursive { configuration ->
                         configuration.properties.dependencyProject == null
@@ -196,9 +224,9 @@ class PitestPlugin implements Plugin<Project> {
             } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 4) {
                 from(project.configurations["compile"])
                 from(project.configurations["testCompile"])
-            } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4) {
+            } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4 && project.findProperty("android.enableJetifier") != "true") {
                 from(project.configurations["${variant.name}UnitTestRuntimeClasspath"].copyRecursive { configuration ->
-                    configuration.properties.dependencyProject == null
+                    configuration.properties.dependencyProject == null && configuration.version != null
                 })
             }
             from(project.configurations["pitestRuntimeOnly"])
@@ -240,7 +268,6 @@ class PitestPlugin implements Plugin<Project> {
                     return targetClasses.getOrNull()
                 }
             } as Provider<Iterable<String>>)
-            dependencyDistance.set(pitestExtension.dependencyDistance)
             threads.set(pitestExtension.threads)
             mutators.set(pitestExtension.mutators)
             excludedMethods.set(pitestExtension.excludedMethods)
@@ -351,7 +378,7 @@ class PitestPlugin implements Plugin<Project> {
                 final GradleVersion minimalPitVersionNotNeedingTestPluginProperty = GradleVersion.version("1.6.7")
                 if (GradleVersion.version(configuredPitVersion) >= minimalPitVersionNotNeedingTestPluginProperty) {
                     log.info("Passing '--testPlugin' to PIT disabled for PIT 1.6.7+. See https://github.com/szpak/gradle-pitest-plugin/issues/277")
-                    pitestTask.testPlugin.set((String)null)
+                    pitestTask.testPlugin.set((String) null)
                 }
             } catch (IllegalArgumentException e) {
                 log.warn("Error during PIT versions comparison. Is '$configuredPitVersion' really valid? If yes, please report that case. " +
