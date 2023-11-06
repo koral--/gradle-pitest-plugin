@@ -12,7 +12,7 @@ blocks:
           commands:
             - checkout
             - sem-version java 17
-            - 'wget https://dl.google.com/android/repository/commandlinetools-linux-9123335_latest.zip -O ~/android-commandline-tools.zip'
+            - 'wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O ~/android-commandline-tools.zip'
             - mkdir -p ~/android-sdk/
             - unzip ~/android-commandline-tools.zip -d ~/android-sdk/cmdline-tools/
             - mv ~/android-sdk/cmdline-tools/cmdline-tools/ ~/android-sdk/cmdline-tools/latest
