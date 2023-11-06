@@ -49,19 +49,19 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             return configuration
         }
 
+        addPitAggregateReportDependency(pitestReportConfiguration)
         project.tasks.register(PITEST_REPORT_AGGREGATE_TASK_NAME, AggregateReportTask) { t ->
             t.description = "Aggregate PIT reports"
             t.group = PitestPlugin.PITEST_TASK_GROUP
             configureTaskDefaults(t)
             //shouldRunAfter should be enough, but it fails in functional tests as :pitestReportAggregate is executed before :pitest tasks from subprojects
             t.mustRunAfter(project.allprojects.collect { Project p -> p.tasks.withType(PitestTask) })
-            addPitAggregateReportDependency(pitestReportConfiguration)
             t.pitestReportClasspath.from(pitestReportConfiguration)
         }
     }
 
     private void configureTaskDefaults(AggregateReportTask aggregateReportTask) {
-        aggregateReportTask.with {
+        aggregateReportTask.with { task ->
             reportDir.set(new File(getReportBaseDirectory(), PitestPlugin.PITEST_REPORT_DIRECTORY_NAME))
             reportFile.set(reportDir.file("index.html"))
 

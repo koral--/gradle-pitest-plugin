@@ -15,17 +15,18 @@
  */
 package pl.droidsonroids.gradle.pitest
 
+import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.BaseExtension
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.TestPlugin
-import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.gradle.api.BaseVariant
 import com.android.build.gradle.internal.api.TestedVariant
 import com.android.builder.model.AndroidProject
 import com.vdurmont.semver4j.Semver
 import groovy.transform.CompileDynamic
 import groovy.transform.PackageScope
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -51,9 +52,10 @@ import static org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_
 @CompileDynamic
 class PitestPlugin implements Plugin<Project> {
 
-    public final static String DEFAULT_PITEST_VERSION = '1.9.11'
+    public final static String DEFAULT_PITEST_VERSION = '1.15.0'
     public final static String PITEST_TASK_GROUP = VERIFICATION_GROUP
     public final static String PITEST_TASK_NAME = "pitest"
+    public final static String PITEST_REPORT_DIRECTORY_NAME = 'pitest'
     public final static String PITEST_CONFIGURATION_NAME = 'pitest'
     public final static String PITEST_TEST_COMPILE_CONFIGURATION_NAME = 'pitestTestCompile'
 
@@ -69,7 +71,6 @@ class PitestPlugin implements Plugin<Project> {
     //visible for testing
     final static String PIT_HISTORY_DEFAULT_FILE_NAME = 'pitHistory.txt'
     private final static String PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME = "pitClasspath"
-    public final static String PITEST_REPORT_DIRECTORY_NAME = 'pitest'
     public static final String PLUGIN_ID = 'pl.droidsonroids.pitest'
 
     private Project project
@@ -89,6 +90,7 @@ class PitestPlugin implements Plugin<Project> {
 
     void apply(Project project) {
         this.project = project
+        failWithMeaningfulErrorMessageOnUnsupportedConfigurationInRootProjectBuildScript()
         createConfigurations()
 
         pitestExtension = project.extensions.create("pitest", PitestPluginExtension, project)
@@ -96,6 +98,7 @@ class PitestPlugin implements Plugin<Project> {
         pitestExtension.fileExtensionsToFilter.set(DEFAULT_FILE_EXTENSIONS_TO_FILTER_FROM_CLASSPATH)
         pitestExtension.useClasspathFile.set(false)
         pitestExtension.verbosity.set("NO_SPINNER")
+        pitestExtension.addJUnitPlatformLauncher.set(true)
 
         project.pluginManager.apply(BasePlugin)
 
@@ -118,6 +121,14 @@ class PitestPlugin implements Plugin<Project> {
             project.plugins.withType(LibraryPlugin) { createPitestTasks(project.android.libraryVariants) }
             project.plugins.withType(TestPlugin) { createPitestTasks(project.android.testVariants) }
             addPitDependencies()
+        }
+    }
+
+    private void failWithMeaningfulErrorMessageOnUnsupportedConfigurationInRootProjectBuildScript() {
+        if (project.rootProject.buildscript.configurations.findByName(PITEST_CONFIGURATION_NAME) != null) {
+            throw new GradleException("The '${PITEST_CONFIGURATION_NAME}' buildscript configuration found in the root project. " +
+                    "This is no longer supported in 1.5.0+ and has to be changed to the regular (sub)project configuration. " +
+                    "See the project FAQ for migration details.")
         }
     }
 
@@ -181,7 +192,7 @@ class PitestPlugin implements Plugin<Project> {
                 from(mockableAndroidJar)
             }
 
-            if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 3) {
+            if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 3 && project.findProperty("android.enableJetifier") != "true") {
                 if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.minor < 3) {
                     from(project.configurations["${variant.name}CompileClasspath"].copyRecursive { configuration ->
                         configuration.properties.dependencyProject == null
@@ -196,9 +207,9 @@ class PitestPlugin implements Plugin<Project> {
             } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 4) {
                 from(project.configurations["compile"])
                 from(project.configurations["testCompile"])
-            } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4) {
+            } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4 && project.findProperty("android.enableJetifier") != "true") {
                 from(project.configurations["${variant.name}UnitTestRuntimeClasspath"].copyRecursive { configuration ->
-                    configuration.properties.dependencyProject == null
+                    configuration.properties.dependencyProject == null && configuration.version != null
                 })
             }
             from(project.configurations["pitestRuntimeOnly"])
@@ -240,7 +251,6 @@ class PitestPlugin implements Plugin<Project> {
                     return targetClasses.getOrNull()
                 }
             } as Provider<Iterable<String>>)
-            dependencyDistance.set(pitestExtension.dependencyDistance)
             threads.set(pitestExtension.threads)
             mutators.set(pitestExtension.mutators)
             excludedMethods.set(pitestExtension.excludedMethods)
@@ -351,7 +361,7 @@ class PitestPlugin implements Plugin<Project> {
                 final GradleVersion minimalPitVersionNotNeedingTestPluginProperty = GradleVersion.version("1.6.7")
                 if (GradleVersion.version(configuredPitVersion) >= minimalPitVersionNotNeedingTestPluginProperty) {
                     log.info("Passing '--testPlugin' to PIT disabled for PIT 1.6.7+. See https://github.com/szpak/gradle-pitest-plugin/issues/277")
-                    pitestTask.testPlugin.set((String)null)
+                    pitestTask.testPlugin.set((String) null)
                 }
             } catch (IllegalArgumentException e) {
                 log.warn("Error during PIT versions comparison. Is '$configuredPitVersion' really valid? If yes, please report that case. " +
