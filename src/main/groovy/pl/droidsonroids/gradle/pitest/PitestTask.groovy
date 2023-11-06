@@ -69,10 +69,6 @@ class PitestTask extends JavaExec {
 
     @Input
     @Optional
-    final Property<Integer> dependencyDistance
-
-    @Input
-    @Optional
     final Property<Integer> threads
 
     @Input
@@ -257,16 +253,19 @@ class PitestTask extends JavaExec {
     List<String> overriddenTargetTests
     //should be Set<String> or SetProperty but it's not supported in Gradle as of 5.6.1
 
+    @Internal
+    File rootDir
+
     PitestTask() {
         getMainClass().set("org.pitest.mutationtest.commandline.MutationCoverageReport")
 
         ObjectFactory of = project.objects
+        rootDir = project.rootDir
 
         testPlugin = of.property(String)
         reportDir = of.directoryProperty()
         targetClasses = of.setProperty(String)
         targetTests = of.setProperty(String)
-        dependencyDistance = of.property(Integer)
         threads = of.property(Integer)
         mutators = of.setProperty(String)
         excludedMethods = of.setProperty(String)
@@ -304,29 +303,29 @@ class PitestTask extends JavaExec {
         pluginConfiguration = of.mapProperty(String, String)
         maxSurviving = of.property(Integer)
         useClasspathJar = of.property(Boolean)
+        inputEncoding = of.property(Charset)
+        outputEncoding = of.property(Charset)
         additionalClasspath = of.fileCollection()
         useAdditionalClasspathFile = of.property(Boolean)
         additionalClasspathFile = of.fileProperty()
         features = of.listProperty(String)
-        inputEncoding = of.property(Charset)
-        outputEncoding = of.property(Charset)
     }
 
     @Input
     String getAdditionalClasspathFilePath() {
-        return additionalClasspathFile.asFile.get().relativePath(project.rootProject.rootDir)
+        return additionalClasspathFile.asFile.get().relativePath(rootDir)
     }
 
     @Input
     @Optional
     String getHistoryInputLocationPath() {
         //?. operator doesn't work with Gradle Providers
-        return historyInputLocation.isPresent() ? historyInputLocation.asFile.get().relativePath(project.rootProject.rootDir) : null
+        return historyInputLocation.isPresent() ? historyInputLocation.asFile.get().relativePath(rootDir) : null
     }
 
     @Input
     String getDefaultFileForHistoryDataPath() {
-        return defaultFileForHistoryData.asFile.get().relativePath(project.rootProject.rootDir)
+        return defaultFileForHistoryData.asFile.get().relativePath(rootDir)
     }
 
     @Input
@@ -358,7 +357,6 @@ class PitestTask extends JavaExec {
         map['reportDir'] = reportDir.getOrNull()?.toString()
         map['targetClasses'] = targetClasses.get().join(',')
         map['targetTests'] = overriddenTargetTests ? overriddenTargetTests.join(',') : optionalCollectionAsString(targetTests)
-        map['dependencyDistance'] = optionalPropertyAsString(dependencyDistance)
         map['threads'] = optionalPropertyAsString(threads)
         map["mutators"] = optionalCollectionAsString(mutators)
         map['excludedMethods'] = optionalCollectionAsString(excludedMethods)

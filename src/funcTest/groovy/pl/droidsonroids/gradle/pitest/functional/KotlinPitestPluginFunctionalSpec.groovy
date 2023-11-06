@@ -67,19 +67,7 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
             result.wasExecuted(':test')
     }
 
-    void "should run mutation analysis with Android Gradle plugin 3"() {
-        when:
-            copyResources("testProjects/simpleKotlin", "")
-        then:
-            fileExists('build.gradle')
-        when:
-            ExecutionResult result = runTasksSuccessfully('pitestRelease')
-        then:
-            result.wasExecuted(':pitestRelease')
-            result.standardOutput.contains('Generated 3 mutations Killed 3 (100%)')
-    }
-
-    void "should run mutation analysis with Android Gradle plugin 2"() {
+    void "should run mutation analysis with kotlin Android plugin"() {
         when:
             copyResources("testProjects/simpleKotlin", "")
         then:
