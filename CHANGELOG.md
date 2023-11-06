@@ -1,3 +1,11 @@
+# 0.2.14 - 2023-11-06
+
+- Update dependency versions
+- Merge upstream changes 3752a463b71648cec3c36a6d52a2f81d366d881c
+- Add mockable Android JAR dependencies automatically [#91](https://github.com/koral--/gradle-pitest-plugin/issue/91)
+- Ignore dependencies without version when copying unit test runtime classpath [#100](https://github.com/koral--/gradle-pitest-plugin/issue/100)
+- Copy runtime classpath only if jetifier is disabled [#99](https://github.com/koral--/gradle-pitest-plugin/issue/99)
+
 # 0.2.13 - 2023-09-01
 
 - Extend pitest test runtime classpath [#95](https://github.com/koral--/gradle-pitest-plugin/issue/95)
