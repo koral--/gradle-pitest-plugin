@@ -53,6 +53,7 @@ class PitestPluginExtension {
      * Related issue: https://github.com/szpak/gradle-pitest-plugin/issues/277
      *
      * @since 1.3.0
+     * @deprecated Not needed with PIT 1.6.7+, to be removed in PIT 1.8.0.
      */
     @Deprecated
     final Property<String> testPlugin
@@ -74,7 +75,6 @@ class PitestPluginExtension {
 
     final SetProperty<String> targetClasses
     final SetProperty<String> targetTests
-    final Property<Integer> dependencyDistance
     final Property<Integer> threads
     final SetProperty<String> mutators
     final SetProperty<String> excludedMethods
@@ -83,7 +83,8 @@ class PitestPluginExtension {
     /**
      * A list of test classes which should be excluded when mutating.
      *
-     * @since 1.3.0* @see #excludedClasses
+     * @since 1.3.0
+     * @see #excludedClasses
      * @see #excludedMethods
      */
     @Incubating
@@ -156,13 +157,21 @@ class PitestPluginExtension {
      *
      * Samples usage ("itest" project depends on "shared" project):
      * <pre>
-     * configure(project(':itest')) {*     dependencies {*         compile project(':shared')
-     *}*
-     *     apply plugin: "pl.droidsonroids.pitest"
+     * configure(project(':itest')) {
+     *     dependencies {
+     *         compile project(':shared')
+     *     }
+     *
+     *     apply plugin: "info.solidsoft.pitest"
      *     //mutableCodeBase - additional configuration to resolve :shared project JAR as mutable code path for PIT
-     *     configurations { mutableCodeBase { transitive false }}*     dependencies { mutableCodeBase project(':shared') }*     pitest {*         mainSourceSets = [project.sourceSets.main, project(':shared').sourceSets.main]
+     *     configurations { mutableCodeBase { transitive false } }
+     *     dependencies { mutableCodeBase project(':shared') }
+     *     pitest {
+     *         mainSourceSets = [project.sourceSets.main, project(':shared').sourceSets.main]
      *         additionalMutableCodePaths = [configurations.mutableCodeBase.singleFile]
-     *}*}* </pre>
+     *     }
+     * }
+     * </pre>
      *
      * @since 1.1.3 (specific for Gradle plugin)
      */
@@ -188,8 +197,10 @@ class PitestPluginExtension {
      *
      * Should be defined a map:
      * <pre>
-     * pitest {*     pluginConfiguration = ["plugin1.key1": "value1", "plugin1.key2": "value2"]
-     *}* </pre>
+     * pitest {
+     *     pluginConfiguration = ["plugin1.key1": "value1", "plugin1.key2": "value2"]
+     * }
+     * </pre>
      */
     MapProperty<String, String> pluginConfiguration
 
@@ -217,8 +228,10 @@ class PitestPluginExtension {
      * PIT fails on not Java specific file passed on a classpath (e.g. native libraries). Native libraries ('*.so', '*.dll', '*.dylib')
      * and '*.pom' files are filtered by default, but a developer can add extra extensions to the list:
      * <pre>
-     * pitest {*     fileExtensionsToFilter += ['xml', 'orbit']
-     *}* </pre>
+     * pitest {
+     *     fileExtensionsToFilter += ['xml', 'orbit']
+     * }
+     * </pre>
      *
      * Rationale: https://github.com/szpak/gradle-pitest-plugin/issues/53
      *
@@ -226,14 +239,33 @@ class PitestPluginExtension {
      *
      * <b>Please note</b>. Starting with 1.4.6 due to Gradle limitations only the new syntax with addAll()/addAll([] is possible (instead of "+="):
      *
-     * pitest {*     fileExtensionsToFilter.addAll('xml', 'orbit')
-     *}*
+     * pitest {
+     *     fileExtensionsToFilter.addAll('xml', 'orbit')
+     * }
+     *
      * More information: https://github.com/gradle/gradle/issues/10475
      *
      * @since 1.2.4
      */
     @Incubating
     final ListProperty<String> fileExtensionsToFilter
+
+    /**
+     * Adds 'junit-platform-launcher' automatically to the 'testRuntimeOnly' configuration.
+     *
+     * Starting with PIT 1.14.0 (with pitest-junit-plugin 1.2.0+) that dependency is no longer shaded and has to be explicitly added to avoid:
+     * "Minion exited abnormally due to UNKNOWN_ERROR" or "NoClassDefFoundError: org.junit.platform.launcher.core.LauncherFactory".
+     * This feature is enabled by default if junit-platform is found on the testImplementation classes.
+     *
+     * PLEASE NOTE. This feature is experimental and might not work as expected in some corner cases. In that situation, just disable it and add
+     * required dependency 'junit-platform-launcher' in a proper version to 'testRuntimeOnly' manually.
+     *
+     * More information: https://github.com/szpak/gradle-pitest-plugin/issues/337
+     *
+     * @since 1.14.0
+     */
+    @Incubating
+    final Property<Boolean> addJUnitPlatformLauncher
 
     final ReportAggregatorProperties reportAggregatorProperties
 
@@ -248,7 +280,6 @@ class PitestPluginExtension {
         targetClasses = nullSetPropertyOf(p, String)
         //null instead of empty collection to distinguish on optional parameters
         targetTests = nullSetPropertyOf(p, String)
-        dependencyDistance = of.property(Integer)
         threads = of.property(Integer)
         mutators = nullSetPropertyOf(p, String)
         excludedMethods = nullSetPropertyOf(p, String)
@@ -291,6 +322,7 @@ class PitestPluginExtension {
         outputCharset = of.property(Charset)
         features = nullListPropertyOf(p, String)
         fileExtensionsToFilter = nullListPropertyOf(p, String)
+        addJUnitPlatformLauncher = of.property(Boolean)
         reportAggregatorProperties = new ReportAggregatorProperties(of)
         excludeMockableAndroidJar = of.property(Boolean)
     }

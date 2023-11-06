@@ -61,6 +61,22 @@ pitest {
 ```
 In such case default mockable Android JAR won't be added and alternative one will be used under tests.
 
+## Using jetifier
+This plugin tries to discover all the unit test dependencies and add them to the pitest classpath automatically.
+But, this feature doesn't work with [jetifier](https://developer.android.com/studio/command-line/jetifier)
+(`android.enableJetifier=true` in `gradle.properties`). 
+
+If you are using jetifier and encounter `NoClassDefFoundError`s in tests run under pitest, you may want to add 
+some dependencies manually to the `pitestTestCompile` configuration. For example:
+```groovy
+buildscript {
+    configurations.create("pitestTestCompile")
+    dependencies {
+        pitestTestCompile 'io.mockk:mockk-agent-jvm:1.11.0'
+    }
+}
+```
+
 # <a name="troubleshooting"></a> Troubleshooting
 ## Tests fail when run under pitest but pass without it
 Issue occurs when using [Android API](https://developer.android.com/reference/packages.html)
