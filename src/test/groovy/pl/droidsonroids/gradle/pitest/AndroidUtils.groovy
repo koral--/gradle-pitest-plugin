@@ -82,6 +82,14 @@ class AndroidUtils {
                 unitTests.returnDefaultValues = true
             }
         }
+        project.dependencies {
+            implementation("org.jetbrains.kotlin:kotlin-reflect:1.6.10")
+            testImplementation("io.mockk:mockk:1.11.0")
+        }
+        project.repositories {
+            mavenCentral()
+            google()
+        }
         project.apply(plugin: "pl.droidsonroids.pitest")
         return project
     }
