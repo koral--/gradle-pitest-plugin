@@ -211,11 +211,11 @@ class PitestPlugin implements Plugin<Project> {
 
             if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 3 && project.findProperty("android.enableJetifier") != "true") {
                 if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.minor < 3) {
-                    from(project.configurations["${variant.name}CompileClasspath"].copyRecursive { configuration ->
-                        configuration.properties.dependencyProject == null
+                    from(project.configurations["${variant.name}CompileClasspath"].copyRecursive { dependency ->
+                        dependency.properties.dependencyProject == null
                     })
-                    from(project.configurations["${variant.name}UnitTestCompileClasspath"].copyRecursive { configuration ->
-                        configuration.properties.dependencyProject == null
+                    from(project.configurations["${variant.name}UnitTestCompileClasspath"].copyRecursive { dependency ->
+                        dependency.properties.dependencyProject == null
                     })
                 } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.minor < 4) {
                     from(project.configurations["${variant.name}CompileClasspath"])
@@ -225,9 +225,10 @@ class PitestPlugin implements Plugin<Project> {
                 from(project.configurations["compile"])
                 from(project.configurations["testCompile"])
             } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4 && project.findProperty("android.enableJetifier") != "true") {
-                from(project.configurations["${variant.name}UnitTestRuntimeClasspath"].copyRecursive { configuration ->
-                    configuration.properties.dependencyProject == null && configuration.version != null
-                })
+                Configuration unittestRuntimeConfig = project.configurations.getByName("${variant.name}UnitTestRuntimeClasspath")
+                from(unittestRuntimeConfig.copyRecursive { dependency ->
+                    dependency.properties.dependencyProject == null && dependency.version != null
+                }.shouldResolveConsistentlyWith(unittestRuntimeConfig))
             }
             from(project.configurations["pitestRuntimeOnly"])
             from(project.files("${project.buildDir}/intermediates/sourceFolderJavaResources/${variant.dirName}"))
