@@ -87,6 +87,16 @@ class PitestPluginTest extends Specification {
             assert classpath.find { it.toString().endsWith('sourceFolderJavaResources/test/freeBlue/release') }
     }
 
+    void "combined task classpath contains dependencies in correct order"() {
+        when:
+            Project project = AndroidUtils.createSampleApplicationProject()
+            project.evaluate()
+        then:
+            Set<File> classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
+            assert classpath.find { it.toString().endsWith('kotlin-reflect-1.3.72.jar') } == null
+            assert classpath.find { it.toString().endsWith('kotlin-reflect-1.6.10.jar') }
+    }
+
     void "strange sdk versions get properly sanitized"() {
         when:
             String version = PitestPlugin.sanitizeSdkVersion('strange version (0)')
