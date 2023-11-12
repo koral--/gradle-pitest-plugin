@@ -1,3 +1,7 @@
+# 0.2.15 - 2023-11-12
+
+- Change additional classpath building [#112](https://github.com/koral--/gradle-pitest-plugin/issue/112)
+
 # 0.2.14 - 2023-11-06
 
 - Update dependency versions
