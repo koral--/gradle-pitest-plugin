@@ -20,6 +20,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.testfixtures.ProjectBuilder
+import spock.lang.Issue
 import spock.lang.Specification
 
 @CompileDynamic
@@ -41,6 +42,24 @@ class PitestPluginTest extends Specification {
             project.plugins.hasPlugin(PitestPlugin)
             List<String> tasks = [AndroidUtils.PITEST_RELEASE_TASK_NAME, "${PitestPlugin.PITEST_TASK_NAME}Debug"]
             assertThatTasksAreInGroup(project, tasks, PitestPlugin.PITEST_TASK_GROUP)
+    }
+
+    @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/116")
+    void "excludes mockable Android JAR"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.android {
+                compileOptions {
+                    sourceCompatibility 11
+                    targetCompatibility 11
+                }
+            }
+            project.pitest {
+                excludeMockableAndroidJar = true
+            }
+            project.evaluate()
+        then:
+            project.tasks.getByName('pitestRelease').additionalClasspath.find { file -> file.path.endsWith('android.jar') } == null
     }
 
     void "apply pitest plugin without android plugin applied"() {
