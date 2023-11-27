@@ -23,6 +23,10 @@ android {
         //ignore missing lint database
         abortOnError false
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
 }
 
 repositories {
@@ -37,3 +41,7 @@ dependencies {
 }
 
 group = "pitest.test"
+pitest {
+    excludeMockableAndroidJar = true
+    verbose = true
+}
