@@ -34,7 +34,7 @@ dependencies {
 }
 
 pitest {
-    junit5PluginVersion = "1.0.0"
+    junit5PluginVersion = "1.2.1"
     avoidCallsTo = ["kotlin.jvm.internal"]
     mutators = ["STRONGER"]
     targetClasses = ['pitest.test.*']  //by default "${project.group}.*"
