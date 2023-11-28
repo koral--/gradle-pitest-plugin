@@ -401,6 +401,7 @@ class PitestPlugin implements Plugin<Project> {
     }
 
     private void addJUnitPlatformLauncherDependencyIfNeeded() {
+        project.configurations.maybeCreate("testImplementation")
         project.configurations.named("testImplementation").configure { testImplementation ->
             testImplementation.withDependencies { directDependencies ->
                 if (!pitestExtension.addJUnitPlatformLauncher.isPresent() || !pitestExtension.addJUnitPlatformLauncher.get()) {
