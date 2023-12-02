@@ -59,7 +59,7 @@ class PitestPluginTest extends Specification {
             }
             project.evaluate()
         then:
-            project.tasks.getByName('pitestRelease').additionalClasspath.find { file -> file.path.endsWith('android.jar') } == null
+            project.tasks.getByName('pitestRelease').additionalClasspath.collect { it.path }.find { it.endsWith('android.jar') } == null
     }
 
     void "apply pitest plugin without android plugin applied"() {
@@ -102,8 +102,8 @@ class PitestPluginTest extends Specification {
             project.evaluate()
         then:
             Object classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
-            assert classpath.find { it.toString().endsWith('sourceFolderJavaResources/freeBlue/release') }
-            assert classpath.find { it.toString().endsWith('sourceFolderJavaResources/test/freeBlue/release') }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}freeBlue${File.separator}release") }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}test${File.separator}freeBlue${File.separator}release") }
     }
 
     @SuppressWarnings("ImplicitClosureParameter")
