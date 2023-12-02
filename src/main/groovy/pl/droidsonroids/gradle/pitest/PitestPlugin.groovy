@@ -46,7 +46,6 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.util.GradleVersion
 
 import java.util.concurrent.Callable
-import java.util.regex.Pattern
 
 import static com.android.builder.model.Version.ANDROID_GRADLE_PLUGIN_VERSION
 import static org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
@@ -67,7 +66,6 @@ class PitestPlugin implements Plugin<Project> {
     private static final String PITEST_JUNIT5_PLUGIN_NAME = "junit5"
     private final static List<String> DYNAMIC_LIBRARY_EXTENSIONS = ['so', 'dll', 'dylib']
     private final static List<String> DEFAULT_FILE_EXTENSIONS_TO_FILTER_FROM_CLASSPATH = ['pom'] + DYNAMIC_LIBRARY_EXTENSIONS
-    private final static Pattern MOCKABLE_ANDROID_JAR_PATH_PATTERN = Pattern.compile(".*${File.separator}platforms${File.separator}android-.*${File.separator}android.jar\$")
 
     @SuppressWarnings("FieldName")
     private final static Logger log = Logging.getLogger(PitestPlugin)
@@ -301,7 +299,7 @@ class PitestPlugin implements Plugin<Project> {
             timestampedReports.set(pitestExtension.timestampedReports)
             additionalClasspath.setFrom({
                 FileCollection filteredCombinedTaskClasspath = combinedTaskClasspath.filter { File file ->
-                    if (pitestExtension.excludeMockableAndroidJar.getOrElse(false) && MOCKABLE_ANDROID_JAR_PATH_PATTERN.matcher(file.absolutePath).matches()) {
+                    if (pitestExtension.excludeMockableAndroidJar.getOrElse(false) && file.name == 'android.jar' && file.absolutePath.split(File.separator).contains('platforms')) {
                         return false
                     } else {
                         return !pitestExtension.fileExtensionsToFilter.getOrElse([]).find { extension -> file.name.endsWith(".$extension") }

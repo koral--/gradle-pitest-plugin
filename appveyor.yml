@@ -10,10 +10,10 @@ before_build:
   - java -version -Xmx32m
 
 build_script:
-  - gradlew.bat assemble --stacktrace --no-daemon
+  - gradlew.bat assemble --stacktrace
 
 test_script:
-  - gradlew.bat check funcTest --stacktrace --no-daemon --continue -Pcompatibility
+  - gradlew.bat check funcTest --stacktrace --continue -Pcompatibility
 
 environment:
   matrix:
