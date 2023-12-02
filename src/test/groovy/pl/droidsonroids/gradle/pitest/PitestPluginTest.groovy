@@ -102,8 +102,8 @@ class PitestPluginTest extends Specification {
             project.evaluate()
         then:
             Object classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
-            assert classpath.find { it.toString().endsWith('sourceFolderJavaResources/freeBlue/release') }
-            assert classpath.find { it.toString().endsWith('sourceFolderJavaResources/test/freeBlue/release') }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}freeBlue${File.separator}release") }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}test${File.separator}freeBlue${File.separator}release") }
     }
 
     @SuppressWarnings("ImplicitClosureParameter")
