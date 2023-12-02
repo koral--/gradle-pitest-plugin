@@ -67,7 +67,7 @@ class PitestPlugin implements Plugin<Project> {
     private static final String PITEST_JUNIT5_PLUGIN_NAME = "junit5"
     private final static List<String> DYNAMIC_LIBRARY_EXTENSIONS = ['so', 'dll', 'dylib']
     private final static List<String> DEFAULT_FILE_EXTENSIONS_TO_FILTER_FROM_CLASSPATH = ['pom'] + DYNAMIC_LIBRARY_EXTENSIONS
-    private final static Pattern MOCKABLE_ANDROID_JAR_PATH_PATTERN = Pattern.compile('.*/platforms/android-.*/android.jar$')
+    private final static Pattern MOCKABLE_ANDROID_JAR_PATH_PATTERN = Pattern.compile(".*${File.separator}platforms${File.separator}android-.*${File.separator}android.jar\$")
 
     @SuppressWarnings("FieldName")
     private final static Logger log = Logging.getLogger(PitestPlugin)
