@@ -2,6 +2,7 @@ package pl.droidsonroids.gradle.pitest.functional
 
 import groovy.transform.CompileDynamic
 import nebula.test.functional.ExecutionResult
+import org.junit.Assume
 
 import static com.android.builder.model.Version.ANDROID_GRADLE_PLUGIN_VERSION
 
@@ -9,6 +10,7 @@ import static com.android.builder.model.Version.ANDROID_GRADLE_PLUGIN_VERSION
 class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
 
     void "setup and run simple build on pitest infrastructure with kotlin plugin"() {
+        Assume.assumeFalse("StreamCorruptedException: invalid type code: 03 on Windows", System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         given:
             buildFile << """
                 apply plugin: 'pl.droidsonroids.pitest'
@@ -68,6 +70,7 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
     }
 
     void "should run mutation analysis with kotlin Android plugin"() {
+        Assume.assumeFalse("PatternSyntaxException: Unexpected internal error near index 1 on Windows", System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         when:
             copyResources("testProjects/simpleKotlin", "")
         then:

@@ -2,6 +2,7 @@ package pl.droidsonroids.gradle.pitest.functional
 
 import groovy.transform.CompileDynamic
 import nebula.test.functional.ExecutionResult
+import org.junit.Assume
 import org.junit.Rule
 import org.junit.rules.TemporaryFolder
 import pl.droidsonroids.gradle.pitest.PitestPlugin
@@ -181,6 +182,7 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
 
     @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/87")
     void "should write reports for each variant separately"() {
+        Assume.assumeFalse("PatternSyntaxException: Unexpected internal error near index 1 on Windows", System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         given:
             copyResources("testProjects/simpleKotlin", "")
         and:

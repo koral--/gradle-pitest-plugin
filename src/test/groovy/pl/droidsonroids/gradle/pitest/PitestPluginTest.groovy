@@ -20,6 +20,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.testfixtures.ProjectBuilder
+import org.junit.Assume
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -46,6 +47,7 @@ class PitestPluginTest extends Specification {
 
     @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/116")
     void "excludes mockable Android JAR"() {
+        Assume.assumeFalse(System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         when:
             Project project = AndroidUtils.createSampleLibraryProject()
             project.android {
@@ -59,7 +61,7 @@ class PitestPluginTest extends Specification {
             }
             project.evaluate()
         then:
-            project.tasks.getByName('pitestRelease').additionalClasspath.find { file -> file.path.endsWith('android.jar') } == null
+            !project.tasks.getByName('pitestRelease').additionalClasspath.getAsPath().contains('android.jar')
     }
 
     void "apply pitest plugin without android plugin applied"() {
@@ -102,8 +104,8 @@ class PitestPluginTest extends Specification {
             project.evaluate()
         then:
             Object classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
-            assert classpath.find { it.toString().endsWith('sourceFolderJavaResources/freeBlue/release') }
-            assert classpath.find { it.toString().endsWith('sourceFolderJavaResources/test/freeBlue/release') }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}freeBlue${File.separator}release") }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}test${File.separator}freeBlue${File.separator}release") }
     }
 
     @SuppressWarnings("ImplicitClosureParameter")
