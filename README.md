@@ -7,13 +7,13 @@ which supports Android gradle projects.
 
 ```groovy
 plugins {
-  id 'pl.droidsonroids.pitest' version '0.2.16'
+  id 'pl.droidsonroids.pitest' version '0.2.17'
 }
 ```
 
 ```kotlin
 plugins {
-  id("pl.droidsonroids.pitest") version "0.2.16"
+  id("pl.droidsonroids.pitest") version "0.2.17"
 }
 ```
 
@@ -25,7 +25,7 @@ buildscript {
     google()
   }
   dependencies {
-    classpath("pl.droidsonroids.gradle:gradle-pitest-plugin:0.2.16")
+    classpath("pl.droidsonroids.gradle:gradle-pitest-plugin:0.2.17")
   }
 }
 
@@ -64,9 +64,9 @@ In such case default mockable Android JAR won't be added and alternative one wil
 ## Using jetifier
 This plugin tries to discover all the unit test dependencies and add them to the pitest classpath automatically.
 But, this feature doesn't work with [jetifier](https://developer.android.com/studio/command-line/jetifier)
-(`android.enableJetifier=true` in `gradle.properties`). 
+(`android.enableJetifier=true` in `gradle.properties`).
 
-If you are using jetifier and encounter `NoClassDefFoundError`s in tests run under pitest, you may want to add 
+If you are using jetifier and encounter `NoClassDefFoundError`s in tests run under pitest, you may want to add
 some dependencies manually to the `pitestTestCompile` configuration. For example:
 ```groovy
 buildscript {
