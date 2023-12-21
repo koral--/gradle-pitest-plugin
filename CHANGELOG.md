@@ -1,3 +1,7 @@
+# 0.2.17 - 2023-12-21
+
+- Fix mockable Android JAR exclusion on Windows [#116](https://github.com/koral--/gradle-pitest-plugin/issue/101)
+
 # 0.2.16 - 2023-11-27
 
 - Merge upstream changes with adding junit platform dependency [#101](https://github.com/koral--/gradle-pitest-plugin/issue/101)
