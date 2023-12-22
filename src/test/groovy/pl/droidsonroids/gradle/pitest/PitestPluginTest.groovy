@@ -47,7 +47,6 @@ class PitestPluginTest extends Specification {
 
     @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/116")
     void "excludes mockable Android JAR"() {
-        Assume.assumeFalse(System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         when:
             Project project = AndroidUtils.createSampleLibraryProject()
             project.android {
