@@ -182,7 +182,6 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
 
     @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/87")
     void "should write reports for each variant separately"() {
-        Assume.assumeFalse("PatternSyntaxException: Unexpected internal error near index 1 on Windows", System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         given:
             copyResources("testProjects/simpleKotlin", "")
         and:
