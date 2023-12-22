@@ -1,6 +1,10 @@
-# 0.2.17 - 2023-12-21
+# 0.2.18 - 2023-12-22
 
-- Fix mockable Android JAR exclusion on Windows [#116](https://github.com/koral--/gradle-pitest-plugin/issue/101)
+- Yet another fix for mockable Android JAR path on Windows [#116](https://github.com/koral--/gradle-pitest-plugin/issues/116#issuecomment-1867313049)
+
+- # 0.2.17 - 2023-12-21
+
+- Fix mockable Android JAR exclusion on Windows [#116](https://github.com/koral--/gradle-pitest-plugin/issue/116)
 
 # 0.2.16 - 2023-11-27
 
