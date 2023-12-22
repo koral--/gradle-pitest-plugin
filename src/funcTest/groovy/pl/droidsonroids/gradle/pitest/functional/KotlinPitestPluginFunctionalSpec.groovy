@@ -70,7 +70,6 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
     }
 
     void "should run mutation analysis with kotlin Android plugin"() {
-        Assume.assumeFalse("PatternSyntaxException: Unexpected internal error near index 1 on Windows", System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         when:
             copyResources("testProjects/simpleKotlin", "")
         then:
