@@ -298,8 +298,9 @@ class PitestPlugin implements Plugin<Project> {
             detectInlinedCode.set(pitestExtension.detectInlinedCode)
             timestampedReports.set(pitestExtension.timestampedReports)
             additionalClasspath.setFrom({
+                String splitter = File.separator.replace("\\", "\\\\")
                 FileCollection filteredCombinedTaskClasspath = combinedTaskClasspath.filter { File file ->
-                    if (pitestExtension.excludeMockableAndroidJar.getOrElse(false) && file.name == 'android.jar' && file.absolutePath.split(File.separator).contains('platforms')) {
+                    if (pitestExtension.excludeMockableAndroidJar.getOrElse(false) && file.name == 'android.jar' && file.absolutePath.split(splitter).contains('platforms')) {
                         return false
                     } else {
                         return !pitestExtension.fileExtensionsToFilter.getOrElse([]).find { extension -> file.name.endsWith(".$extension") }
