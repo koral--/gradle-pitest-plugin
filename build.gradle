@@ -95,7 +95,7 @@ tasks.withType(Test).configureEach { testTask ->
 }
 
 codenarc {
-    toolVersion = "2.0.0"
+    toolVersion = "2.2.0"
 }
 
 tasks.register("codenarc") {
