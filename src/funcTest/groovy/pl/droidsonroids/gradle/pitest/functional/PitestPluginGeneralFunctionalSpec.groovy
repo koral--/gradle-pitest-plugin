@@ -72,9 +72,9 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
             writeHelloPitClass()
             writeHelloPitTest()
         when:
-            ExecutionResult result = runTasksSuccessfully('pitest')
+            ExecutionResult result = runTasksSuccessfully('pitestRelease')
         then:
-            result.wasExecuted(':pitest')
+            result.wasExecuted(':pitestRelease')
             result.getStandardOutput().contains("--historyInputLocation=${historyInputLocation.absolutePath}")
         and:    //it works with @OutputFile by default, but just in case
             result.getStandardOutput().contains("--historyOutputLocation=${historyOutputLocation.absolutePath}")
@@ -95,9 +95,9 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
             writeHelloPitClass()
             writeHelloPitTest()
         when:
-            ExecutionResult result = runTasksSuccessfully('pitest')
+            ExecutionResult result = runTasksSuccessfully('pitestRelease')
         then:
-            result.wasExecuted(':pitest')
+            result.wasExecuted(':pitestRelease')
         and:
             result.standardOutput.contains('Generated 2 mutations Killed 1 (50%)')
             result.standardOutput.contains('Ran 2 tests (1 tests per mutation)')
@@ -122,6 +122,7 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
                 apply plugin: 'pl.droidsonroids.pitest'
 
                 android {
+                    namespace 'pl.drodsonroids.pitest'
                     compileSdkVersion 30
                     defaultConfig {
                         minSdkVersion 10
@@ -166,16 +167,16 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
             writeHelloPitClass()
             writeHelloPitTest()
         when:
-            ExecutionResult result = runTasksSuccessfully('pitest', '--build-cache')
-            ExecutionResult result2 = runTasksSuccessfully('clean', 'pitest', '--build-cache')
+            ExecutionResult result = runTasksSuccessfully('pitestDebug', '--build-cache')
+            ExecutionResult result2 = runTasksSuccessfully('clean', 'pitestDebug', '--build-cache')
         then:
-            result.wasExecuted(':pitest')
+            result.wasExecuted(':pitestDebug')
             result.getStandardOutput().contains("Build cache key for task ':pitestDebug' is")
 //            //TODO: It's flaky - build cache for TestKit executions seems to be also cached
 //            //      Tests in Gradle itself have similar problem: https://github.com/gradle/gradle/blob/5ec3f672ed600a86280be490395d70b7bc634862/subprojects/core/src/integTest/groovy/org/gradle/api/tasks/CachedTaskIntegrationTest.groovy#L118-L132
 //            result.getStandardOutput().contains("Stored cache entry for task ':pitest'")
         and:
-            result2.wasExecuted(':pitest')
+            result2.wasExecuted(':pitestDebug')
             result2.getStandardOutput().contains("Task :pitestDebug FROM-CACHE")
     }
 

@@ -9,11 +9,12 @@ apply plugin: 'com.android.application'
 apply plugin: 'pl.droidsonroids.pitest'
 
 android {
-    compileSdkVersion 32
+    namespace 'pl.drodsonroids.pitest'
+    compileSdkVersion 34
     defaultConfig {
         applicationId "pl.droidsonroids.robolectric"
         minSdkVersion 25
-        targetSdkVersion 32
+        targetSdkVersion 33
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -28,9 +29,11 @@ android {
             includeAndroidResources = true
         }
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 

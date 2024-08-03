@@ -42,9 +42,9 @@ class ExternalLibrariesFunctionalSpec extends AbstractPitestFunctionalSpec {
         given:
             copyResources("testProjects/junit5spock2", "")
         when:
-            ExecutionResult result = runTasksSuccessfully('pitest')
+            ExecutionResult result = runTasksSuccessfully('pitestDebug')
         then:
-            result.wasExecuted('pitest')
+            result.wasExecuted('pitestDebug')
         and:
             result.standardOutput.contains('Generated 1 mutations Killed 1 (100%)')
     }

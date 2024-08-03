@@ -35,12 +35,16 @@ apply plugin: "pl.droidsonroids.pitest.aggregator"
         apply plugin: 'pl.droidsonroids.pitest'
 
         android {
-            compileSdkVersion 32
+            namespace 'pl.drodsonroids.pitest'
+            compileSdkVersion 34
             defaultConfig {
                 minSdkVersion 10
-                targetSdkVersion 32
+                targetSdkVersion 34
             }
 
+            variantFilter {
+                it.ignore = it.name == "debug"
+            }
         }
 
         dependencies {
