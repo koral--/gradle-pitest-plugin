@@ -12,7 +12,7 @@ plugins {
     id 'com.vanniktech.maven.publish' version '0.25.3'
 }
 
-sourceCompatibility = 1.8
+//sourceCompatibility = 1.8
 
 ext.pitestAggregatorVersion = "1.15.0"   //Must be equal to default PIT version in PitestPlugin
 
@@ -26,10 +26,14 @@ sourceSets {
     funcTest
 }
 
+configurations {
+    funcTest.extendsFrom(testImplementation, testRuntimeOnly, implementation)
+}
+
 dependencies {
     implementation localGroovy()
     compileOnly "org.pitest:pitest-aggregator:$pitestAggregatorVersion"
-    implementation 'com.android.tools.build:gradle:7.3.1'
+    implementation 'com.android.tools.build:gradle:8.5.1'
     implementation 'com.vdurmont:semver4j:3.1.0'
 
     testImplementation('org.spockframework:spock-core:2.3-groovy-3.0') {
@@ -43,8 +47,10 @@ dependencies {
 
     funcTestImplementation sourceSets.main.output  //to make production plugin classes visible in functional tests (it's not in testCompile configuration)
     funcTestImplementation sourceSets.test.output
-    funcTestImplementation configurations.testImplementation
-    funcTestRuntimeOnly configurations.testRuntimeOnly
+    funcTestImplementation 'com.vdurmont:semver4j:3.1.0'
+    funcTestImplementation 'com.android.tools.build:gradle:8.5.1'
+//    funcTestImplementation configurations.testImplementation
+//    funcTestRuntimeOnly configurations.testRuntimeOnly
     funcTestImplementation('com.netflix.nebula:nebula-test:10.5.0') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
@@ -55,7 +61,6 @@ tasks.register('funcTest', Test) {
     group = 'Verification'
     testClassesDirs = sourceSets.funcTest.output.classesDirs
     classpath = sourceSets.funcTest.runtimeClasspath
-    jvmArgs '-Xmx1g'
     forkEvery 1
     systemProperty('org.gradle.daemon', 'false')
     systemProperty('ignoreDeprecations', 'true') //FIXME remove after AGP stops using deprecated API
@@ -102,8 +107,8 @@ tasks.register("codenarc") {
 //Workaround on https://github.com/gradle/gradle/issues/12663
 tasks.withType(CodeNarc) { codeNarcTask ->
     reports {
-        text.enabled = true
-        html.enabled = true
+//        text.enabled = true
+//        html.enabled = true
     }
     codeNarcTask.finalizedBy(project.task("print${codeNarcTask.name.capitalize()}") {
         onlyIf {

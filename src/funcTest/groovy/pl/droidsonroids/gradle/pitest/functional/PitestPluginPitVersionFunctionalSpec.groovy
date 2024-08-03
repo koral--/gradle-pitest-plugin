@@ -23,11 +23,11 @@ class PitestPluginPitVersionFunctionalSpec extends AbstractPitestFunctionalSpec 
             writeHelloPitClass()
             writeHelloPitTest()
         when:
-            ExecutionResult result = runTasks('pitest')
+            ExecutionResult result = runTasks('pitestRelease')
         then:
             !result.standardError.contains("Build failed with an exception")
             !result.failure
-            result.wasExecuted(':pitest')
+            result.wasExecuted(':pitestRelease')
         and:
             result.standardOutput.contains("Using PIT: ${pitVersion}")
             result.standardOutput.contains("pitest-${pitVersion}.jar")

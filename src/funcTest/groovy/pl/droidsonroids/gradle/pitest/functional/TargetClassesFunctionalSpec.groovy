@@ -24,6 +24,7 @@ class TargetClassesFunctionalSpec extends AbstractPitestFunctionalSpec {
                 }
 
                 android {
+                    namespace 'pl.drodsonroids.pitest'
                     compileSdkVersion 30
                     defaultConfig {
                         minSdkVersion 10

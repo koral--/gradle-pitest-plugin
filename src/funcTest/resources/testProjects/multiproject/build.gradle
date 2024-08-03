@@ -24,12 +24,12 @@ configure(project(":shared")) {
     apply plugin: 'com.android.library'
 
     android {
-        compileSdkVersion 32
+        namespace 'pl.drodsonroids.pitest'
+        compileSdkVersion 34
         defaultConfig {
             minSdkVersion 10
-            targetSdkVersion 32
+            targetSdkVersion 34
         }
-
     }
 
     dependencies {
@@ -49,10 +49,11 @@ configure(project(':itest')) {
     apply plugin: 'pl.droidsonroids.pitest'
 
     android {
-        compileSdkVersion 32
+        namespace 'pl.drodsonroids.pitest'
+        compileSdkVersion 34
         defaultConfig {
             minSdkVersion 10
-            targetSdkVersion 32
+            targetSdkVersion 34
         }
     }
     dependencies {
