@@ -2,7 +2,7 @@ import org.gradle.api.internal.classpath.ModuleRegistry
 import org.gradle.api.internal.project.ProjectInternal
 
 plugins {
-    id 'com.github.ben-manes.versions' version '0.47.0'
+    id 'com.github.ben-manes.versions' version '0.51.0'
     id 'groovy'
     id 'maven-publish'
     id 'codenarc'
