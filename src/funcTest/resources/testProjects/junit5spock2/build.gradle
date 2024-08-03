@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'pl.droidsonroids.pitest'
 
 buildscript {
-    ext.junit5Version = '5.9.1'
+    ext.junit5Version = '5.10.0'
 
     repositories {
         mavenCentral()
@@ -23,10 +23,11 @@ dependencies {
 }
 
 android {
-    compileSdkVersion 32
+    namespace 'pl.drodsonroids.pitest'
+    compileSdkVersion 34
     defaultConfig {
         minSdkVersion 10
-        targetSdkVersion 32
+        targetSdkVersion 34
     }
     testOptions {
         unitTests.all {
@@ -36,7 +37,7 @@ android {
 }
 
 pitest {
-    junit5PluginVersion = "1.0.0"
+    junit5PluginVersion = "1.2.1"
     targetClasses = ['pitest.test.*']
     verbose = true
 }

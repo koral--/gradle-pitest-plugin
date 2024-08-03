@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.7.21'
+    ext.kotlin_version = '2.0.0'
 
     repositories {
         google()
@@ -16,8 +16,6 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'pl.droidsonroids.pitest'
 
-sourceCompatibility = 1.8
-
 repositories {
     google()
     mavenCentral()
@@ -25,7 +23,7 @@ repositories {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    def coroutines_version = "1.6.4"
+    def coroutines_version = "1.8.1"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
 
@@ -37,10 +35,11 @@ dependencies {
 }
 
 android {
-    compileSdkVersion 32
+    namespace 'pl.drodsonroids.pitest'
+    compileSdkVersion 34
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 32
+        targetSdkVersion 33
     }
     lintOptions {
         //ignore missing lint database
@@ -48,10 +47,15 @@ android {
     }
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
 pitest {
     targetClasses = ['pitest.test.*']
     mutationThreshold = 0
     threads = 4
+    junit5PluginVersion = '1.2.1'
     timeoutConstInMillis = 2000
     failWhenNoMutations = false
     outputFormats = ['HTML']
