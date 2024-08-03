@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'pl.droidsonroids.pitest'
 
 buildscript {
-    ext.junit5Version = '5.10.0'
+    ext.junit5Version = '5.10.3'
 
     repositories {
         mavenCentral()
