@@ -5,7 +5,7 @@ import android.content.Context;
 import org.junit.Test;
 import org.robolectric.RuntimeEnvironment;
 
-import pl.droidsonroids.robolectric.R;
+import pl.drodsonroids.pitest.R;
 import pl.droidsonroids.robolectric.RobolectricTest;
 
 import static org.junit.Assert.assertEquals;

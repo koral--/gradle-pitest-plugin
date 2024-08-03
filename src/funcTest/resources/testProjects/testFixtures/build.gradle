@@ -24,10 +24,11 @@ dependencies {
 }
 
 android {
-    compileSdkVersion 32
+    namespace 'pl.drodsonroids.pitest'
+    compileSdkVersion 34
     defaultConfig {
         minSdkVersion 24
-        targetSdkVersion 32
+        targetSdkVersion 34
     }
     lintOptions {
         //ignore missing lint database
