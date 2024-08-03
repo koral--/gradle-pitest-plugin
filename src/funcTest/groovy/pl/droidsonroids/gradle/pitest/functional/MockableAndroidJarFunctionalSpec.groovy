@@ -16,14 +16,15 @@ class MockableAndroidJarFunctionalSpec extends AbstractPitestFunctionalSpec {
                     }
                     dependencies {
                         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.21"
-                        classpath 'com.android.tools.build:gradle:7.0.0'
+                        classpath 'com.android.tools.build:gradle:8.5.1'
                     }
                 }
 
-                apply plugin: 'pl.droidsonroids.pitest'
                 apply plugin: 'com.android.application'
+                apply plugin: 'pl.droidsonroids.pitest'
 
                 android {
+                    namespace 'pl.drodsonroids.pitest'
                     compileSdkVersion 30
                     defaultConfig {
                         minSdkVersion 10

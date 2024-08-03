@@ -1,10 +1,9 @@
 package pl.droidsonroids.gradle.pitest.functional
 
+import groovy.io.FileType
 import groovy.transform.CompileDynamic
 import nebula.test.functional.ExecutionResult
 import org.junit.Assume
-
-import static com.android.builder.model.Version.ANDROID_GRADLE_PLUGIN_VERSION
 
 @CompileDynamic
 class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
@@ -13,9 +12,9 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
         Assume.assumeFalse("StreamCorruptedException: invalid type code: 03 on Windows", System.getProperty("os.name", "unknown").toLowerCase(Locale.ROOT).contains("win"))
         given:
             buildFile << """
-                apply plugin: 'pl.droidsonroids.pitest'
                 apply plugin: 'com.android.library'
                 apply plugin: 'kotlin-android'
+                apply plugin: 'pl.droidsonroids.pitest'
 
                 buildscript {
                     repositories {
@@ -23,12 +22,13 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
                         mavenCentral()
                     }
                     dependencies {
-                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.21"
-                        classpath 'com.android.tools.build:gradle:7.0.0'
+                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24"
+                        classpath 'com.android.tools.build:gradle:8.5.1'
                     }
                 }
 
                 android {
+                    namespace 'pl.drodsonroids.pitest'
                     compileSdkVersion 30
                     defaultConfig {
                         minSdkVersion 10
@@ -61,12 +61,18 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
         when:
             ExecutionResult result = runTasksSuccessfully('build')
         then:
-            if (ANDROID_GRADLE_PLUGIN_VERSION.startsWith("3.2")) {
-                fileExists('build/intermediates/javac/release/compileReleaseJavaWithJavac/classes/gradle/pitest/test/hello/HelloWorld.class')
-            } else {
-                fileExists('build/intermediates/classes/release/gradle/pitest/test/hello/HelloWorld.class')
-            }
+            isFileFound(projectDir, 'HelloWorld.class')
             result.wasExecuted(':test')
+    }
+
+    private static boolean isFileFound(File directory, String fileName) {
+        def found = false
+        directory.traverse(type: FileType.FILES) { file ->
+            if (file.name == fileName) {
+                found = true
+            }
+        }
+        return found
     }
 
     void "should run mutation analysis with kotlin Android plugin"() {

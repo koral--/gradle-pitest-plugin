@@ -74,7 +74,7 @@ class PitestPlugin implements Plugin<Project> {
     @PackageScope
     //visible for testing
     final static String PIT_HISTORY_DEFAULT_FILE_NAME = 'pitHistory.txt'
-    private final static String PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME = "pitClasspath"
+    final static String PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME = "pitClasspath"
     public static final String PLUGIN_ID = 'pl.droidsonroids.pitest'
 
     private Project project
@@ -175,6 +175,10 @@ class PitestPlugin implements Plugin<Project> {
             suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
 
             variantTask.dependsOn "compile${variant.name.capitalize()}UnitTestSources"
+            def debugJavaCompileTask = project.tasks.findByName("compileDebugJavaWithJavac")
+            if (debugJavaCompileTask != null) {
+                variantTask.mustRunAfter(debugJavaCompileTask)
+            }
             globalTask.dependsOn variantTask
         }
     }
@@ -241,14 +245,23 @@ class PitestPlugin implements Plugin<Project> {
             from(project.files("${project.buildDir}/intermediates/java_res/${variant.dirName}/out"))
             from(project.files("${project.buildDir}/intermediates/java_res/${variant.dirName}UnitTest/out"))
             from(project.files("${project.buildDir}/intermediates/unitTestConfig/test/${variant.dirName}"))
+            Task kotlinCompileTask = project.tasks.findByName("compile${variant.name.capitalize()}Kotlin")
+            if (kotlinCompileTask != null) {
+                from(kotlinCompileTask.destinationDirectory.asFile)
+            }
+
             if (variant instanceof TestedVariant) {
                 variant.unitTestVariant?.with { unitTestVariant ->
-                    from(getJavaCompileTask(unitTestVariant).classpath)
-                    from(project.files(getJavaCompileTask(unitTestVariant).destinationDirectory.asFile))
+                    Task testKotlinCompileTask = project.tasks.findByName("compile${unitTestVariant.name.capitalize()}Kotlin")
+                    if (testKotlinCompileTask != null) {
+                        from(testKotlinCompileTask.destinationDirectory.asFile)
+                    }
+                    getJavaCompileTask(unitTestVariant).classpath.forEach { from(it) }
+                    project.files(getJavaCompileTask(unitTestVariant).destinationDirectory.asFile).forEach { from(it) }
                 }
             }
-            from(getJavaCompileTask(variant).classpath)
-            from(project.files(getJavaCompileTask(variant).destinationDirectory.asFile))
+            getJavaCompileTask(variant).classpath.forEach { from(it) }
+            project.files(getJavaCompileTask(variant).destinationDirectory.asFile).forEach { from(it) }
         }
 
         task.with {

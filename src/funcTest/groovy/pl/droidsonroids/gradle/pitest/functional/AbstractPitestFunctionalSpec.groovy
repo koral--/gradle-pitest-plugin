@@ -18,19 +18,20 @@ abstract class AbstractPitestFunctionalSpec extends IntegrationSpec {
     void writeManifestFile() {
         File manifestFile = new File(projectDir, 'src/main/AndroidManifest.xml')
         manifestFile.parentFile.mkdirs()
-        manifestFile.write('<?xml version="1.0" encoding="utf-8"?><manifest package="pl.droidsonroids.pitest.hello"/>')
+        manifestFile.write('<?xml version="1.0" encoding="utf-8"?><manifest />')
     }
 
     protected static String getBasicGradlePitestConfig() {
         return """
-                apply plugin: 'pl.droidsonroids.pitest'
                 apply plugin: 'com.android.library'
+                apply plugin: 'pl.droidsonroids.pitest'
 
                 android {
-                    compileSdkVersion 30
+                    namespace 'pl.drodsonroids.pitest'
+                    compileSdkVersion 34
                     defaultConfig {
                         minSdkVersion 10
-                        targetSdkVersion 30
+                        targetSdkVersion 33
                     }
                 }
                 group = 'gradle.pitest.test'

@@ -27,6 +27,7 @@ class AndroidUtils {
         }
         project.apply(plugin: "com.android.library")
         project.android.with {
+            namespace 'pl.drodsonroids.pitest'
             compileSdkVersion 30
             defaultConfig {
                 minSdkVersion 10
@@ -54,6 +55,7 @@ class AndroidUtils {
         }
         project.apply(plugin: "com.android.application")
         project.android.with {
+            namespace 'pl.drodsonroids.pitest'
             compileSdkVersion 30
             defaultConfig {
                 minSdkVersion 10
