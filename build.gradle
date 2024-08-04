@@ -1,6 +1,3 @@
-import org.gradle.api.internal.classpath.ModuleRegistry
-import org.gradle.api.internal.project.ProjectInternal
-
 plugins {
     id 'com.github.ben-manes.versions' version '0.51.0'
     id 'groovy'
@@ -11,8 +8,6 @@ plugins {
     id 'com.gradle.plugin-publish' version '1.2.1'
     id 'com.vanniktech.maven.publish' version '0.25.3'
 }
-
-//sourceCompatibility = 1.8
 
 ext.pitestAggregatorVersion = "1.15.0"   //Must be equal to default PIT version in PitestPlugin
 
@@ -49,8 +44,6 @@ dependencies {
     funcTestImplementation sourceSets.test.output
     funcTestImplementation 'com.vdurmont:semver4j:3.1.0'
     funcTestImplementation 'com.android.tools.build:gradle:8.5.1'
-//    funcTestImplementation configurations.testImplementation
-//    funcTestRuntimeOnly configurations.testRuntimeOnly
     funcTestImplementation('com.netflix.nebula:nebula-test:10.6.1') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
@@ -106,10 +99,6 @@ tasks.register("codenarc") {
 
 //Workaround on https://github.com/gradle/gradle/issues/12663
 tasks.withType(CodeNarc) { codeNarcTask ->
-    reports {
-//        text.enabled = true
-//        html.enabled = true
-    }
     codeNarcTask.finalizedBy(project.task("print${codeNarcTask.name.capitalize()}") {
         onlyIf {
             codeNarcTask.state.failure != null
