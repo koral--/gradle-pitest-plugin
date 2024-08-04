@@ -51,7 +51,7 @@ dependencies {
     funcTestImplementation 'com.android.tools.build:gradle:8.5.1'
 //    funcTestImplementation configurations.testImplementation
 //    funcTestRuntimeOnly configurations.testRuntimeOnly
-    funcTestImplementation('com.netflix.nebula:nebula-test:10.5.0') {
+    funcTestImplementation('com.netflix.nebula:nebula-test:10.6.1') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
 }
