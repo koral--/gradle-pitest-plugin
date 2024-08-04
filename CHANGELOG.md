@@ -1,3 +1,17 @@
+# 0.2.19 - 2024-08-04
+
+- Update AGP to 8.5.0 by @koral-- in https://github.com/koral--/gradle-pitest-plugin/pull/127
+- Update dependency com.android.support:support-annotations to v27.1.1 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/104
+- Update dependency net.bytebuddy:byte-buddy to v1.14.18 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/108
+- Update dependency org.jetbrains:annotations-java5 to v16.0.3 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/109
+- Update junit5Version to v5.10.3 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/129
+- Update dependency de.mannodermaus.gradle.plugins:android-junit5 to v1.10.2.0 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/128
+- Update dependency org.slf4j:slf4j-api to v2.0.13 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/111
+- Update kotlin_version to v1.9.25 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/130
+- Update dependency codenarc to v2.2.0 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/131
+- Update plugin com.github.ben-manes.versions to v0.51.0 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/136
+- Update dependency com.netflix.nebula:nebula-test to v10.6.1 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/132
+
 # 0.2.18 - 2023-12-22
 
 - Yet another fix for mockable Android JAR path on Windows [#116](https://github.com/koral--/gradle-pitest-plugin/issues/116#issuecomment-1867313049)
