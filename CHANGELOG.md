@@ -1,3 +1,8 @@
+# 0.2.20 - 2024-10-15
+
+- Specify Java toolchain version explicitly by @jonas-ms in https://github.com/koral--/gradle-pitest-plugin/pull/142
+- Update dependency codenarc to v3 by @renovate in https://github.com/koral--/gradle-pitest-plugin/pull/138
+
 # 0.2.19 - 2024-08-04
 
 - Update AGP to 8.5.0 by @koral-- in https://github.com/koral--/gradle-pitest-plugin/pull/127
