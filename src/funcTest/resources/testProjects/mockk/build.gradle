@@ -30,7 +30,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutines_version"
     testImplementation "io.mockk:mockk:1.13.2"
-    testImplementation "io.mockk:mockk-agent-jvm:1.13.2"
+    testImplementation "io.mockk:mockk-agent-jvm:1.13.17"
     testImplementation "org.jetbrains.kotlin:kotlin-reflect:1.7.21"
 }
 
