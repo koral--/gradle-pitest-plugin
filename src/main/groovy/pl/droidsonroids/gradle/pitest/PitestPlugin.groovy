@@ -35,6 +35,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.result.ResolutionResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.DefaultDomainObjectSet
 import org.gradle.api.logging.Logger
@@ -256,12 +257,12 @@ class PitestPlugin implements Plugin<Project> {
                     if (testKotlinCompileTask != null) {
                         from(testKotlinCompileTask.destinationDirectory.asFile)
                     }
-                    getJavaCompileTask(unitTestVariant).classpath.forEach { file -> from(file) }
-                    project.files(getJavaCompileTask(unitTestVariant).destinationDirectory.asFile).forEach { file -> from(file) }
+                    from(getJavaCompileClasspathProvider(unitTestVariant))
+                    from(getJavaCompileDestinationProvider(unitTestVariant))
                 }
             }
-            getJavaCompileTask(variant).classpath.forEach { file -> from(file) }
-            project.files(getJavaCompileTask(variant).destinationDirectory.asFile).forEach { file -> from(file) }
+            from(getJavaCompileClasspathProvider(variant))
+            from(getJavaCompileDestinationProvider(variant))
         }
 
         task.with {
@@ -352,6 +353,18 @@ class PitestPlugin implements Plugin<Project> {
             features.set(pitestExtension.features)
             inputEncoding.set(pitestExtension.inputCharset)
             outputEncoding.set(pitestExtension.outputCharset)
+        }
+    }
+
+    private Provider<FileCollection> getJavaCompileClasspathProvider(BaseVariant variant) {
+        return project.provider {
+            getJavaCompileTask(variant).classpath
+        }
+    }
+
+    private Provider<Directory> getJavaCompileDestinationProvider(BaseVariant variant) {
+        return project.provider {
+            getJavaCompileTask(variant).destinationDirectory.get()
         }
     }
 
