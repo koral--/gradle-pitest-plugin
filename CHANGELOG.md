@@ -1,3 +1,6 @@
+# 0.2.21 - 2025-04-04
+- Fix ProjectConfigurationException when using AGP 8.8.0 (or newer) combined with a project-Dependency  by @mast-eso in https://github.com/koral--/gradle-pitest-plugin/pull/150
+
 # 0.2.20 - 2024-10-15
 
 - Specify Java toolchain version explicitly by @jonas-ms in https://github.com/koral--/gradle-pitest-plugin/pull/142
