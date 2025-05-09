@@ -15,7 +15,7 @@ java {
     }
 }
 
-ext.pitestAggregatorVersion = "1.15.0"   //Must be equal to default PIT version in PitestPlugin
+ext.pitestAggregatorVersion = "1.19.2"   //Must be equal to default PIT version in PitestPlugin
 
 repositories {
     mavenCentral()
