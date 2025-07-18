@@ -1,3 +1,7 @@
+# 0.2.22 - 2025-07-19
+- Ensure full runtime classpath passed to pitest (robolectric support) by @hcoles in https://github.com/koral--/gradle-pitest-plugin/pull/154
+- Merge upstream changes by @koral-- in https://github.com/koral--/gradle-pitest-plugin/pull/155
+
 # 0.2.21 - 2025-04-04
 - Fix ProjectConfigurationException when using AGP 8.8.0 (or newer) combined with a project-Dependency  by @mast-eso in https://github.com/koral--/gradle-pitest-plugin/pull/150
 
