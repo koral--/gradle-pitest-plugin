@@ -96,4 +96,20 @@ class OverridePluginFunctionalSpec extends AbstractPitestFunctionalSpec {
             result.standardOutput.contains("--targetTests=$overriddenTargetTests")
     }
 
+    void "should allow to enable verbose output from command line"() {
+        given:
+            buildFile << """
+                ${getBasicGradlePitestConfig()}
+
+                pitest {
+                    failWhenNoMutations = false
+                    verbose = false
+                }
+            """.stripIndent()
+        when:
+            ExecutionResult result = runTasksSuccessfully('pitestRelease', '--verbose')
+        then:
+            result.standardOutput.contains("--verbose=true")
+    }
+
 }

@@ -253,6 +253,12 @@ class PitestTask extends JavaExec {
     List<String> overriddenTargetTests
     //should be Set<String> or SetProperty but it's not supported in Gradle as of 5.6.1
 
+    @Incubating
+    @Option(option = "verbose", description = "Output verbose logging. Overrides 'verbose' defined in configuration")
+    @Input
+    @Optional
+    Boolean overriddenVerbose
+
     @Internal
     File rootDir
 
@@ -363,7 +369,7 @@ class PitestTask extends JavaExec {
         map['excludedClasses'] = optionalCollectionAsString(excludedClasses)
         map['excludedTestClasses'] = optionalCollectionAsString(excludedTestClasses)
         map['avoidCallsTo'] = optionalCollectionAsString(avoidCallsTo)
-        map['verbose'] = optionalPropertyAsString(verbose)
+        map['verbose'] = overriddenVerbose ? overriddenVerbose.toString() : optionalPropertyAsString(verbose)
         map['verbosity'] = optionalPropertyAsString(verbosity)
         map['timeoutFactor'] = optionalPropertyAsString(timeoutFactor)
         map['timeoutConst'] = optionalPropertyAsString(timeoutConstInMillis)
