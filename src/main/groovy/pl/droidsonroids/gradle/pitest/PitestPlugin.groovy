@@ -235,6 +235,11 @@ class PitestPlugin implements Plugin<Project> {
                 from(project.configurations["compile"])
                 from(project.configurations["testCompile"])
             } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4 && project.findProperty("android.enableJetifier") != "true") {
+                Configuration runtimeConfig = project.configurations.getByName("${variant.name}RuntimeClasspath")
+                from(runtimeConfig.copyRecursive { dependency ->
+                    dependency.properties.dependencyProject == null && dependency.version != null
+                }.shouldResolveConsistentlyWith(runtimeConfig))
+
                 Configuration unittestRuntimeConfig = project.configurations.getByName("${variant.name}UnitTestRuntimeClasspath")
                 from(unittestRuntimeConfig.copyRecursive { dependency ->
                     dependency.properties.dependencyProject == null && dependency.version != null
