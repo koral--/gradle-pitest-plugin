@@ -19,9 +19,8 @@ import groovy.transform.CompileDynamic
 import groovy.transform.PackageScope
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.junit.Rule
-import org.junit.rules.TemporaryFolder
 import spock.lang.Specification
+import spock.lang.TempDir
 
 import static PitestPlugin.PITEST_TASK_NAME
 
@@ -32,8 +31,8 @@ import static PitestPlugin.PITEST_TASK_NAME
 @CompileDynamic
 class BasicProjectBuilderSpec extends Specification {
 
-    @Rule
-    protected TemporaryFolder tmpProjectDir = new TemporaryFolder()
+    @TempDir
+    protected File tmpProjectDir
 
     protected Project project
     protected PitestPluginExtension pitestConfig
@@ -41,7 +40,7 @@ class BasicProjectBuilderSpec extends Specification {
     //TODO: There is a regression in 2.14.1 with API jar regeneration for every test - https://discuss.gradle.org/t/performance-regression-in-projectbuilder-in-2-14-and-3-0/18956
     //https://github.com/gradle/gradle/commit/3216f07b3acb4cbbb8241d8a1d50b8db9940f37e
     protected void setup() {
-        project = AndroidUtils.createSampleLibraryProject(tmpProjectDir.root)
+        project = AndroidUtils.createSampleLibraryProject(tmpProjectDir)
 
         pitestConfig = project.getExtensions().getByType(PitestPluginExtension)
 

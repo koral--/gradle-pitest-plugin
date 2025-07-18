@@ -57,7 +57,7 @@ import static org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_
 @CompileDynamic
 class PitestPlugin implements Plugin<Project> {
 
-    public final static String DEFAULT_PITEST_VERSION = '1.15.0'
+    public final static String DEFAULT_PITEST_VERSION = '1.19.5'
     public final static String PITEST_TASK_GROUP = VERIFICATION_GROUP
     public final static String PITEST_TASK_NAME = "pitest"
     public final static String PITEST_REPORT_DIRECTORY_NAME = 'pitest'
@@ -426,8 +426,12 @@ class PitestPlugin implements Plugin<Project> {
     }
 
     private void addJUnitPlatformLauncherDependencyIfNeeded() {
-        project.configurations.maybeCreate("testImplementation")
-        project.configurations.named("testImplementation").configure { testImplementation ->
+        //Starting with Gradle 8.8.0, Configuration implements "Named" which generates runtime error on "testConfiguration.name" for plugin compiled
+        //with 8.8.0+ and executed with lower versions. Keep constant name as workaround
+        //Related commit: https://github.com/gradle/gradle/commit/61220ea4fdb30b5c7265dd41e7ac4d70896c957b
+        final String testImplementationConfigurationName = "testImplementation"
+
+        project.configurations.named(testImplementationConfigurationName).configure {  testImplementation ->
             testImplementation.withDependencies { directDependencies ->
                 if (!pitestExtension.addJUnitPlatformLauncher.isPresent() || !pitestExtension.addJUnitPlatformLauncher.get()) {
                     log.info("'addJUnitPlatformLauncher' feature explicitly disabled in configuration. " +
