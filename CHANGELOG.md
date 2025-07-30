@@ -1,3 +1,6 @@
+# 0.2.23 - 2025-07-30
+- No changes, fix broken release 0.2.22
+
 # 0.2.22 - 2025-07-19
 - Ensure full runtime classpath passed to pitest (robolectric support) by @hcoles in https://github.com/koral--/gradle-pitest-plugin/pull/154
 - Merge upstream changes by @koral-- in https://github.com/koral--/gradle-pitest-plugin/pull/155
