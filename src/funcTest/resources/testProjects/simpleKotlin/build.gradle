@@ -36,7 +36,7 @@ repositories {
 
 dependencies {
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.assertj:assertj-core:3.23.1'
+    testImplementation 'org.assertj:assertj-core:3.27.4'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.0"
 }
 
