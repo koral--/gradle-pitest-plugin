@@ -1,3 +1,6 @@
+# 0.2.24 - 2025-11-01
+- Ignore variants added by baseline profile plugin - https://github.com/koral--/gradle-pitest-plugin/pull/160
+
 # 0.2.23 - 2025-07-30
 - No changes, fix broken release 0.2.22
 
