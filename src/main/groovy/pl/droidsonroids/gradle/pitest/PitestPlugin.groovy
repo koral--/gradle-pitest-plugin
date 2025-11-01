@@ -211,6 +211,9 @@ class PitestPlugin implements Plugin<Project> {
 
     @SuppressWarnings(["Instanceof", "UnnecessarySetter", "DuplicateNumberLiteral"])
     private void configureTaskDefault(PitestTask task, BaseVariant variant, File mockableAndroidJar) {
+        if (project.plugins.hasPlugin("androidx.baselineprofile") && (variant.name.startsWith("nonMinified") || variant.name.startsWith("benchmark"))) {
+            return
+        }
         FileCollection combinedTaskClasspath = project.files()
 
         combinedTaskClasspath.with {
