@@ -1,3 +1,6 @@
+# 0.2.25 - 2025-12-02
+- Ignore flavored variants added by baseline profile plugin - https://github.com/koral--/gradle-pitest-plugin/pull/162
+
 # 0.2.24 - 2025-11-01
 - Ignore variants added by baseline profile plugin - https://github.com/koral--/gradle-pitest-plugin/pull/160
 
