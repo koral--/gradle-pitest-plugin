@@ -211,7 +211,7 @@ class PitestPlugin implements Plugin<Project> {
 
     @SuppressWarnings(["Instanceof", "UnnecessarySetter", "DuplicateNumberLiteral"])
     private void configureTaskDefault(PitestTask task, BaseVariant variant, File mockableAndroidJar) {
-        if (project.plugins.hasPlugin("androidx.baselineprofile") && (variant.name.startsWith("nonMinified") || variant.name.startsWith("benchmark"))) {
+        if (isBaselineProfileVariant(variant)) {
             return
         }
         FileCollection combinedTaskClasspath = project.files()
@@ -364,6 +364,12 @@ class PitestPlugin implements Plugin<Project> {
         }
     }
 
+    private boolean isBaselineProfileVariant(BaseVariant variant) {
+        String flavoredNonMinified = variant.flavorName ? "${variant.flavorName}NonMinified" : "nonMinified"
+        String flavoredBenchmark = variant.flavorName ? "${variant.flavorName}Benchmark" : "benchmark"
+        return (project.plugins.hasPlugin("androidx.baselineprofile") && (variant.name.startsWith(flavoredNonMinified) || variant.name.startsWith(flavoredBenchmark)))
+    }
+
     private Provider<FileCollection> getJavaCompileClasspathProvider(BaseVariant variant) {
         return project.provider {
             getJavaCompileTask(variant).classpath
@@ -439,7 +445,7 @@ class PitestPlugin implements Plugin<Project> {
         //Related commit: https://github.com/gradle/gradle/commit/61220ea4fdb30b5c7265dd41e7ac4d70896c957b
         final String testImplementationConfigurationName = "testImplementation"
 
-        project.configurations.named(testImplementationConfigurationName).configure {  testImplementation ->
+        project.configurations.named(testImplementationConfigurationName).configure { testImplementation ->
             testImplementation.withDependencies { directDependencies ->
                 if (!pitestExtension.addJUnitPlatformLauncher.isPresent() || !pitestExtension.addJUnitPlatformLauncher.get()) {
                     log.info("'addJUnitPlatformLauncher' feature explicitly disabled in configuration. " +
