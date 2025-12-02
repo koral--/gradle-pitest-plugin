@@ -37,7 +37,7 @@ dependencies {
     implementation 'com.android.tools.build:gradle:8.5.1'
     implementation 'com.vdurmont:semver4j:3.1.0'
 
-    testImplementation('org.spockframework:spock-core:2.4-M6-groovy-3.0') {
+    testImplementation('org.spockframework:spock-core:2.4-M7-groovy-5.0') {
         exclude group: 'org.codehaus.groovy'
     }
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
