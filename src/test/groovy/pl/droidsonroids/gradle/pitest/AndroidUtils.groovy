@@ -21,7 +21,7 @@ class AndroidUtils {
         File manifestFile = project.file('src/main/AndroidManifest.xml')
         manifestFile.parentFile.mkdirs()
         manifestFile.write(resource.text)
-        project.buildscript.repositories {
+        project.repositories {
             google()
             mavenCentral()
         }
