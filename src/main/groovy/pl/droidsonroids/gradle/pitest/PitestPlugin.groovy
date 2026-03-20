@@ -35,6 +35,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.result.ResolutionResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.DefaultDomainObjectSet
@@ -110,7 +111,7 @@ class PitestPlugin implements Plugin<Project> {
         project.plugins.whenPluginAdded {
             ReportingExtension reportingExtension = project.extensions.findByType(ReportingExtension)
             if (reportingExtension != null) {
-                pitestExtension.reportDir.set(new File(reportingExtension.baseDir, "pitest"))
+                pitestExtension.reportDir.set(new File(reportingExtension.baseDirectory.get().asFile, "pitest"))
             }
         }
 
@@ -186,7 +187,7 @@ class PitestPlugin implements Plugin<Project> {
 
     private void addMockableAndroidJarDependencies() {
         //according to https://search.maven.org/artifact/com.google.android/android/4.1.1.4/jar
-        project.buildscript.dependencies {
+        project.dependencies {
             "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "org.json:json:20080701"
             "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "xpp3:xpp3:1.1.4c"
             "$PITEST_TEST_COMPILE_CONFIGURATION_NAME" "xerces:xmlParserAPIs:2.6.2"
@@ -199,7 +200,7 @@ class PitestPlugin implements Plugin<Project> {
     @SuppressWarnings("BuilderMethodWithSideEffects")
     private void createConfigurations() {
         [PITEST_CONFIGURATION_NAME, PITEST_TEST_COMPILE_CONFIGURATION_NAME].each { configuration ->
-            project.buildscript.configurations.maybeCreate(configuration).with {
+            project.configurations.maybeCreate(configuration).with {
                 visible = false
                 description = "The PIT libraries to be used for this project."
             }
@@ -217,7 +218,7 @@ class PitestPlugin implements Plugin<Project> {
         FileCollection combinedTaskClasspath = project.files()
 
         combinedTaskClasspath.with {
-            from(project.buildscript.configurations[PITEST_TEST_COMPILE_CONFIGURATION_NAME])
+            from(project.configurations[PITEST_TEST_COMPILE_CONFIGURATION_NAME])
             if (!pitestExtension.excludeMockableAndroidJar.getOrElse(false)) {
                 from(mockableAndroidJar)
             }
@@ -239,14 +240,26 @@ class PitestPlugin implements Plugin<Project> {
                 from(project.configurations["testCompile"])
             } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major > 4 && project.findProperty("android.enableJetifier") != "true") {
                 Configuration runtimeConfig = project.configurations.getByName("${variant.name}RuntimeClasspath")
-                from(runtimeConfig.copyRecursive { dependency ->
+                Configuration copiedRuntimeConfig = runtimeConfig.copyRecursive { dependency ->
                     dependency.properties.dependencyProject == null && dependency.version != null
-                }.shouldResolveConsistentlyWith(runtimeConfig))
+                }.shouldResolveConsistentlyWith(runtimeConfig)
+
+                from(copiedRuntimeConfig.incoming.artifactView { view ->
+                    view.attributes { attrs ->
+                        attrs.attribute(Attribute.of("artifactType", String), "jar")
+                    }
+                }.files)
 
                 Configuration unittestRuntimeConfig = project.configurations.getByName("${variant.name}UnitTestRuntimeClasspath")
-                from(unittestRuntimeConfig.copyRecursive { dependency ->
+                Configuration copiedUnittestRuntimeConfig = unittestRuntimeConfig.copyRecursive { dependency ->
                     dependency.properties.dependencyProject == null && dependency.version != null
-                }.shouldResolveConsistentlyWith(unittestRuntimeConfig))
+                }.shouldResolveConsistentlyWith(unittestRuntimeConfig)
+
+                from(copiedUnittestRuntimeConfig.incoming.artifactView { view ->
+                    view.attributes { attrs ->
+                        attrs.attribute(Attribute.of("artifactType", String), "jar")
+                    }
+                }.files)
             }
             from(project.configurations["pitestRuntimeOnly"])
             from(project.files("${project.buildDir}/intermediates/sourceFolderJavaResources/${variant.dirName}"))
@@ -353,7 +366,7 @@ class PitestPlugin implements Plugin<Project> {
             jvmPath.set(pitestExtension.jvmPath)
             mainProcessJvmArgs.set(pitestExtension.mainProcessJvmArgs)
             launchClasspath.setFrom({
-                project.buildscript.configurations[PITEST_CONFIGURATION_NAME]
+                project.configurations[PITEST_CONFIGURATION_NAME]
             } as Callable<Configuration>)
             pluginConfiguration.set(pitestExtension.pluginConfiguration)
             maxSurviving.set(pitestExtension.maxSurviving)
@@ -383,7 +396,7 @@ class PitestPlugin implements Plugin<Project> {
     }
 
     private void addPitDependencies() {
-        project.buildscript.dependencies {
+        project.dependencies {
             String pitestVersion = pitestExtension.pitestVersion.get()
             log.info("Using PIT: $pitestVersion")
             pitest "org.pitest:pitest-command-line:$pitestVersion"
