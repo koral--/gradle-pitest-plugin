@@ -17,7 +17,7 @@ repositories {
 group = "pitest.test"
 
 dependencies {
-    testImplementation 'org.spockframework:spock-core:2.3-groovy-4.0'
+    testImplementation 'org.spockframework:spock-core:2.4-groovy-5.0'
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junit5Version"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junit5Version"
 }
