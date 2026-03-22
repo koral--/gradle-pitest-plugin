@@ -15,17 +15,17 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
 
     void "enable PIT plugin when on classpath and pass plugin configuration to PIT"() {
         given:
+            gradleVersion = gradleVersionForTest
             buildFile << getBasicGradlePitestConfig()
             copyResources("testRepos", "")  //Custom artifacts due to: https://github.com/hcoles/pitest-plugins/pull/4
             buildFile << """
-                rootProject.buildscript {
-                    repositories {
-                        maven { url "./customPluginRepo/" }
-                    }
-                    dependencies {
-                        pitest 'org.pitest.plugins:pitest-plugin-configuration-reporter-plugin:0.0.2'
-                    }
+                repositories {
+                    maven { url "./customPluginRepo/" }
                 }
+                dependencies {
+                    "pitest"('org.pitest.plugins:pitest-plugin-configuration-reporter-plugin:0.0.2')
+                }
+
                 pitest {
                     excludedClasses = []
                     verbose = true
@@ -53,6 +53,8 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
         and: 'verbose output enabled'
             assertStdOutOrStdErrContainsGivenText(result, "PIT >> FINE")
             //TODO: Add plugin features once available - https://github.com/hcoles/pitest-plugins/issues/2
+        where:
+            gradleVersionForTest << [null, "9.1.0"]
     }
 
     @Issue(["https://github.com/gradle/gradle/issues/12351", "https://github.com/szpak/gradle-pitest-plugin/issues/189"])
