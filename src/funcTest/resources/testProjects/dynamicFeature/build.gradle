@@ -1,0 +1,100 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        google()
+    }
+    dependencies {
+        //Local/current version of the plugin should be put on a classpath earlier to override that plugin version
+        //classpath 'info.solidsoft.gradle.pitest:gradle-pitest-plugin:1.1.3-SNAPSHOT'
+    }
+}
+
+repositories {  //in root project for pitest-aggregator.jar
+    google()
+    mavenCentral()
+}
+
+subprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    version = '1.0'
+    group = 'pitest.sample.dynamicfeature'
+}
+
+apply plugin: "pl.droidsonroids.pitest.aggregator"
+
+configure(project(":app")) {
+    buildscript {
+        repositories {
+            google()
+            mavenCentral()
+        }
+    }
+    apply plugin: 'com.android.application'
+    apply plugin: 'pl.droidsonroids.pitest'
+
+    android {
+        namespace 'pl.drodsonroids.pitest'
+        compileSdkVersion 34
+        defaultConfig {
+            minSdkVersion 10
+            targetSdkVersion 34
+        }
+        dynamicFeatures = [':dynamic_feature']
+    }
+    dependencies {
+        testImplementation 'junit:junit:4.13.2'
+    }
+
+    pitest {
+        outputFormats = ["HTML", "XML"]
+        timestampedReports = false
+        exportLineCoverage = true
+        reportAggregator {
+            testStrengthThreshold.set(50)   //simpler Groovy syntax (testStrengthThreshold = 50) does not seem to be supported for nested properties
+            mutationThreshold.set(40)
+            maxSurviving.set(6)
+        }
+        targetClasses = ['pitest.**']
+    }
+}
+
+configure(project(":dynamic_feature")) {
+    buildscript {
+        repositories {
+            google()
+            mavenCentral()
+        }
+    }
+    apply plugin: 'com.android.dynamic-feature'
+    apply plugin: 'pl.droidsonroids.pitest'
+
+    android {
+        namespace 'pl.drodsonroids.pitest'
+        compileSdkVersion 34
+        defaultConfig {
+            minSdkVersion 10
+            targetSdkVersion 34
+        }
+    }
+    dependencies {
+        implementation project(':app')
+        testImplementation 'junit:junit:4.13.2'
+    }
+
+    pitest {
+        outputFormats = ["HTML", "XML"]
+        timestampedReports = false
+        exportLineCoverage = true
+        reportAggregator {
+            testStrengthThreshold.set(50)   //simpler Groovy syntax (testStrengthThreshold = 50) does not seem to be supported for nested properties
+            mutationThreshold.set(40)
+            maxSurviving.set(6)
+        }
+        targetClasses = ['pitest.**']
+    }
+}
