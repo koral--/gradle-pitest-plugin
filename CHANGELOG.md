@@ -1,3 +1,6 @@
+# 0.2.26 - 2026-03-22
+- Adapt to breaking changes in Gradle 9 by @stemas in https://github.com/koral--/gradle-pitest-plugin/pull/165
+
 # 0.2.25 - 2025-12-02
 - Ignore flavored variants added by baseline profile plugin - https://github.com/koral--/gradle-pitest-plugin/pull/162
 
