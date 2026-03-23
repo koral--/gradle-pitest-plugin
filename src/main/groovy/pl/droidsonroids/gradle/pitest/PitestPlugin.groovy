@@ -18,6 +18,7 @@ package pl.droidsonroids.gradle.pitest
 import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.BaseExtension
+import com.android.build.gradle.DynamicFeaturePlugin
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.TestPlugin
 import com.android.build.gradle.api.BaseVariant
@@ -125,6 +126,7 @@ class PitestPlugin implements Plugin<Project> {
 
             project.plugins.withType(AppPlugin) { createPitestTasks(project.android.applicationVariants) }
             project.plugins.withType(LibraryPlugin) { createPitestTasks(project.android.libraryVariants) }
+            project.plugins.withType(DynamicFeaturePlugin) { createPitestTasks(project.android.applicationVariants) }
             project.plugins.withType(TestPlugin) { createPitestTasks(project.android.testVariants) }
             addPitDependencies()
         }
