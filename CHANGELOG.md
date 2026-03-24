@@ -1,3 +1,6 @@
+# 0.2.27 - 2026-03-24
+- Add support for Android Dynamic Feature Module by @ekosuhariyadi in https://github.com/koral--/gradle-pitest-plugin/pull/163
+
 # 0.2.26 - 2026-03-22
 - Adapt to breaking changes in Gradle 9 by @stemas in https://github.com/koral--/gradle-pitest-plugin/pull/165
 
