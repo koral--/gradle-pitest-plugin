@@ -33,7 +33,7 @@ configure(project(":shared")) {
     }
 
     dependencies {
-        api 'org.slf4j:slf4j-api:2.0.13'
+        api 'org.slf4j:slf4j-api:2.0.17'
         testImplementation 'junit:junit:4.13.2'
     }
 }
