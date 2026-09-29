@@ -125,6 +125,49 @@ class PitestPluginTest extends Specification {
     }
 
     @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/166")
+    void "wires unit test compilation when pitest is applied before the Android plugin"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject(true)
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            Task pitestDebug = project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}Debug")
+            assert pitestDebug != null
+            assert pitestDebug.taskDependencies.getDependencies(pitestDebug)*.name.contains("compileDebugUnitTestSources")
+    }
+
+    @SuppressWarnings("ImplicitClosureParameter")
+    void "new variant API uses Android style variant directory names"() {
+        when:
+            Project project = AndroidUtils.createSampleApplicationProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            Object classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}freeBlue${File.separator}release") }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}test${File.separator}freeBlue${File.separator}release") }
+    }
+
+    @SuppressWarnings("ImplicitClosureParameter")
+    void "resolves runtime classpath when pitest is applied before the Android plugin"() {
+        when:
+            Project project = AndroidUtils.createSampleApplicationProject(true)
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            Set<File> classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
+            assert classpath.find { it.toString().endsWith('kotlin-reflect-1.6.10.jar') }
+    }
+
+    void "variant tasks are added on the legacy path when pitest is applied before the Android plugin"() {
+        when:
+            Project project = AndroidUtils.createSampleApplicationProject(true)
+            project.evaluate()
+        then:
+            assert project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease") != null
+    }
+
+    @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/166")
     void "supports android newDsl flag and androidComponents"() {
         when:
             Project project = AndroidUtils.createSampleLibraryProject()

@@ -17,6 +17,7 @@ package pl.droidsonroids.gradle.pitest
 
 import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.api.variant.AndroidComponentsExtension
+import com.android.build.api.variant.HasUnitTest
 import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.DynamicFeaturePlugin
 import com.android.build.gradle.LibraryPlugin
@@ -130,12 +131,8 @@ class PitestPlugin implements Plugin<Project> {
             AndroidComponentsExtension androidComponents = project.extensions.findByType(AndroidComponentsExtension)
             if (androidComponents != null) {
                 androidComponents.onVariants(androidComponents.selector().all()) { variant ->
-                    String flavorName = variant.productFlavors*.second.join('')
-                    List<String> dirParts = (variant.productFlavors*.second as List<String>) ?: []
-                    if (variant.buildType) {
-                        dirParts.add(variant.buildType)
-                    }
-                    String dirName = dirParts.join('/')
+                    String flavorName = variant.flavorName ?: ''
+                    String dirName = [flavorName, variant.buildType].findAll().join('/')
 
                     String unitTestName = null
                     try {
@@ -153,6 +150,7 @@ class PitestPlugin implements Plugin<Project> {
                             flavorName: flavorName,
                             dirName: dirName,
                             unitTestName: unitTestName,
+                            supportsUnitTests: HasUnitTest.isInstance(variant),
                     ]
                     collectedVariantInfos.add(variantInfo)
                     if (newApiVariantTasksEnabled) {
@@ -166,7 +164,11 @@ class PitestPlugin implements Plugin<Project> {
         }
 
         project.afterEvaluate {
-            def androidSourceSets = project.extensions.findByName("android")?.sourceSets
+            //has to run after the Android plugin created the test configurations, which is not guaranteed when this
+            //plugin is applied before `com.android.*`, but still before any of them gets copied for the Pitest classpath
+            addJUnitPlatformLauncherDependencyIfNeeded()
+
+            Object androidSourceSets = project.extensions.findByName("android")?.sourceSets
             if (pitestExtension.mainSourceSets.empty() && androidSourceSets?.findByName("main") != null) {
                 pitestExtension.mainSourceSets.set(androidSourceSets.main as Set<AndroidSourceSet>)
             }
@@ -182,7 +184,7 @@ class PitestPlugin implements Plugin<Project> {
                 // variants collected so far get tasks now; later ones are handled by the onVariants callback
                 newApiVariantTasksEnabled = true
                 createGlobalPitestTask()
-                collectedVariantInfos.each { createPitestTaskForVariantInfo(it) }
+                collectedVariantInfos.each { Map<String, Object> variantInfo -> createPitestTaskForVariantInfo(variantInfo) }
             } else {
                 project.plugins.withType(AppPlugin) { createPitestTasksLegacy(project.android.applicationVariants) }
                 project.plugins.withType(LibraryPlugin) { createPitestTasksLegacy(project.android.libraryVariants) }
@@ -191,7 +193,6 @@ class PitestPlugin implements Plugin<Project> {
             }
             addPitDependencies()
         }
-        addJUnitPlatformLauncherDependencyIfNeeded()
     }
 
     private void failWithMeaningfulErrorMessageOnUnsupportedConfigurationInRootProjectBuildScript() {
@@ -219,12 +220,14 @@ class PitestPlugin implements Plugin<Project> {
         String variantFlavorName = variantInfo.flavorName as String
         String variantDirName = variantInfo.dirName as String
         String unitTestName = variantInfo.unitTestName as String
+        boolean supportsUnitTests = variantInfo.supportsUnitTests as boolean
 
         if (isBaselineProfileVariantByName(variantName, variantFlavorName)) {
             return
         }
 
-        if (unitTestName == null) {
+        //variants which do not support unit tests at all (e.g. in `com.android.test` modules) still get a Pitest task
+        if (supportsUnitTests && unitTestName == null) {
             log.info("Skipping Pitest task creation for variant '${variantName}' because unit tests are not enabled for it.")
             return
         }
@@ -250,14 +253,9 @@ class PitestPlugin implements Plugin<Project> {
         }
         suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
 
-        Task compileSources = project.tasks.findByName("compile${variantName.capitalize()}UnitTestSources")
-        if (compileSources != null) {
-            variantTask.dependsOn compileSources
-        }
-        Task debugJavaCompileTask = project.tasks.findByName("compileDebugJavaWithJavac")
-        if (debugJavaCompileTask != null) {
-            variantTask.mustRunAfter(debugJavaCompileTask)
-        }
+        //resolved lazily, the tasks may not exist yet when this plugin is applied before `com.android.*`
+        variantTask.dependsOn { project.tasks.findByName("compile${variantName.capitalize()}UnitTestSources") ?: [] }
+        variantTask.mustRunAfter { project.tasks.findByName("compileDebugJavaWithJavac") ?: [] }
         globalTask.dependsOn variantTask
     }
 
@@ -394,16 +392,10 @@ class PitestPlugin implements Plugin<Project> {
             from(project.files("${project.buildDir}/intermediates/java_res/${dirName}/out"))
             from(project.files("${project.buildDir}/intermediates/java_res/${dirName}UnitTest/out"))
             from(project.files("${project.buildDir}/intermediates/unitTestConfig/test/${dirName}"))
-            Task kotlinCompileTask = project.tasks.findByName("compile${variantName.capitalize()}Kotlin")
-            if (kotlinCompileTask != null) {
-                from(kotlinCompileTask.destinationDirectory.asFile)
-            }
+            from { project.tasks.findByName("compile${variantName.capitalize()}Kotlin")?.destinationDirectory?.asFile }
 
             if (unitTestName != null) {
-                Task testKotlinCompileTask = project.tasks.findByName("compile${unitTestName.capitalize()}Kotlin")
-                if (testKotlinCompileTask != null) {
-                    from(testKotlinCompileTask.destinationDirectory.asFile)
-                }
+                from { project.tasks.findByName("compile${unitTestName.capitalize()}Kotlin")?.destinationDirectory?.asFile }
                 from(getJavaCompileClasspathProviderByName(unitTestName))
                 from(getJavaCompileDestinationProviderByName(unitTestName))
             }

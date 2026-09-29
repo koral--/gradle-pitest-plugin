@@ -11,6 +11,10 @@ class AndroidUtils {
     static final String PITEST_RELEASE_TASK_NAME = "${PitestPlugin.PITEST_TASK_NAME}Release"
 
     static Project createSampleLibraryProject(File... rootDir) {
+        return createSampleLibraryProject(false, rootDir)
+    }
+
+    static Project createSampleLibraryProject(boolean applyPitestFirst, File... rootDir) {
         ProjectBuilder builder = ProjectBuilder.builder()
         if (rootDir.length > 0) {
             builder.withProjectDir(rootDir[0])
@@ -25,6 +29,9 @@ class AndroidUtils {
             google()
             mavenCentral()
         }
+        if (applyPitestFirst) {
+            project.apply(plugin: "pl.droidsonroids.pitest")
+        }
         project.apply(plugin: "com.android.library")
         project.android.with {
             namespace 'pl.drodsonroids.pitest'
@@ -34,11 +41,17 @@ class AndroidUtils {
                 targetSdkVersion 30
             }
         }
-        project.apply(plugin: "pl.droidsonroids.pitest")
+        if (!applyPitestFirst) {
+            project.apply(plugin: "pl.droidsonroids.pitest")
+        }
         return project
     }
 
     static Project createSampleApplicationProject(File... rootDir) {
+        return createSampleApplicationProject(false, rootDir)
+    }
+
+    static Project createSampleApplicationProject(boolean applyPitestFirst, File... rootDir) {
         ProjectBuilder builder = ProjectBuilder.builder()
         if (rootDir.length > 0) {
             builder.withProjectDir(rootDir[0])
@@ -52,6 +65,9 @@ class AndroidUtils {
         project.buildscript.repositories {
             google()
             mavenCentral()
+        }
+        if (applyPitestFirst) {
+            project.apply(plugin: "pl.droidsonroids.pitest")
         }
         project.apply(plugin: "com.android.application")
         project.android.with {
@@ -92,7 +108,9 @@ class AndroidUtils {
             mavenCentral()
             google()
         }
-        project.apply(plugin: "pl.droidsonroids.pitest")
+        if (!applyPitestFirst) {
+            project.apply(plugin: "pl.droidsonroids.pitest")
+        }
         return project
     }
 
