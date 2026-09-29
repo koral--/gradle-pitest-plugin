@@ -124,4 +124,15 @@ class PitestPluginTest extends Specification {
             assert version == 'strange-version--0-'
     }
 
+    @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/166")
+    void "supports android newDsl flag and androidComponents"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            project.plugins.hasPlugin(PitestPlugin)
+            project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}Debug") != null
+    }
+
 }
