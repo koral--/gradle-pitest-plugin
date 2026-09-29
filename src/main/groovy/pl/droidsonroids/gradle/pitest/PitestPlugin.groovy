@@ -92,6 +92,8 @@ class PitestPlugin implements Plugin<Project> {
 
     private Project project
     private PitestPluginExtension pitestExtension
+    private Task globalPitestTask
+    private boolean newApiVariantTasksEnabled
 
     static String sanitizeSdkVersion(String version) {
         return version.replaceAll('[^\\p{Alnum}.-]', '-')
@@ -145,13 +147,17 @@ class PitestPlugin implements Plugin<Project> {
                         // No unit test support for this variant
                     }
 
-                    collectedVariantInfos.add([
+                    Map<String, Object> variantInfo = [
                             name: variant.name,
                             buildType: variant.buildType ?: '',
                             flavorName: flavorName,
                             dirName: dirName,
                             unitTestName: unitTestName,
-                    ])
+                    ]
+                    collectedVariantInfos.add(variantInfo)
+                    if (newApiVariantTasksEnabled) {
+                        createPitestTaskForVariantInfo(variantInfo)
+                    }
                 }
             }
         }
@@ -160,11 +166,12 @@ class PitestPlugin implements Plugin<Project> {
         }
 
         project.afterEvaluate {
-            if (pitestExtension.mainSourceSets.empty()) {
-                pitestExtension.mainSourceSets.set(project.android.sourceSets.main as Set<AndroidSourceSet>)
+            def androidSourceSets = project.extensions.findByName("android")?.sourceSets
+            if (pitestExtension.mainSourceSets.empty() && androidSourceSets?.findByName("main") != null) {
+                pitestExtension.mainSourceSets.set(androidSourceSets.main as Set<AndroidSourceSet>)
             }
-            if (pitestExtension.testSourceSets.empty()) {
-                pitestExtension.testSourceSets.set(project.android.sourceSets.test as Set<AndroidSourceSet>)
+            if (pitestExtension.testSourceSets.empty() && androidSourceSets?.findByName("test") != null) {
+                pitestExtension.testSourceSets.set(androidSourceSets.test as Set<AndroidSourceSet>)
             }
 
             boolean useNewVariantApi = ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major >= AGP_9_MAJOR_VERSION ||
@@ -172,7 +179,10 @@ class PitestPlugin implements Plugin<Project> {
                     !hasLegacyVariants(project)
 
             if (useNewVariantApi) {
-                createPitestTasksFromVariantInfos(collectedVariantInfos)
+                // variants collected so far get tasks now; later ones are handled by the onVariants callback
+                newApiVariantTasksEnabled = true
+                createGlobalPitestTask()
+                collectedVariantInfos.each { createPitestTaskForVariantInfo(it) }
             } else {
                 project.plugins.withType(AppPlugin) { createPitestTasksLegacy(project.android.applicationVariants) }
                 project.plugins.withType(LibraryPlugin) { createPitestTasksLegacy(project.android.libraryVariants) }
@@ -193,60 +203,62 @@ class PitestPlugin implements Plugin<Project> {
     }
 
     @SuppressWarnings("BuilderMethodWithSideEffects")
-    private void createPitestTasksFromVariantInfos(List<Map<String, Object>> variantInfos) {
-        Task globalTask = project.tasks.create(PITEST_TASK_NAME)
-        globalTask.with {
+    private void createGlobalPitestTask() {
+        globalPitestTask = project.tasks.create(PITEST_TASK_NAME)
+        globalPitestTask.with {
             description = "Run PIT analysis for java classes, for all build variants"
             group = PITEST_TASK_GROUP
             shouldRunAfter("test")
         }
+    }
 
-        variantInfos.each { Map<String, Object> variantInfo ->
-            String variantName = variantInfo.name as String
-            String variantFlavorName = variantInfo.flavorName as String
-            String variantDirName = variantInfo.dirName as String
-            String unitTestName = variantInfo.unitTestName as String
+    @SuppressWarnings("BuilderMethodWithSideEffects")
+    private void createPitestTaskForVariantInfo(Map<String, Object> variantInfo) {
+        Task globalTask = globalPitestTask
+        String variantName = variantInfo.name as String
+        String variantFlavorName = variantInfo.flavorName as String
+        String variantDirName = variantInfo.dirName as String
+        String unitTestName = variantInfo.unitTestName as String
 
-            if (isBaselineProfileVariantByName(variantName, variantFlavorName)) {
-                return
-            }
-
-            if (unitTestName == null) {
-                log.info("Skipping Pitest task creation for variant '${variantName}' because unit tests are not enabled for it.")
-                return
-            }
-
-            PitestTask variantTask = project.tasks.create("${PITEST_TASK_NAME}${variantName.capitalize()}", PitestTask)
-
-            boolean includeMockableAndroidJar = !pitestExtension.excludeMockableAndroidJar.getOrElse(false)
-            if (includeMockableAndroidJar) {
-                addMockableAndroidJarDependencies()
-            }
-
-            Task mockableAndroidJarTask = project.tasks.maybeCreate("pitestMockableAndroidJar", PitestMockableAndroidJarTask)
-            configureTaskDefaultByName(variantTask, variantName, variantDirName, unitTestName, mockableAndroidJarTask.outputJar)
-
-            if (includeMockableAndroidJar) {
-                variantTask.dependsOn mockableAndroidJarTask
-            }
-
-            variantTask.with {
-                description = "Run PIT analysis for java classes, for ${variantName} build variant"
-                group = PITEST_TASK_GROUP
-                shouldRunAfter("test${variantName.capitalize()}UnitTest")
-            }
-            suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
-
-            Task compileSources = project.tasks.findByName("compile${variantName.capitalize()}UnitTestSources")
-            if (compileSources != null) {
-                variantTask.dependsOn compileSources
-            }
-            Task debugJavaCompileTask = project.tasks.findByName("compileDebugJavaWithJavac")
-            if (debugJavaCompileTask != null) {
-                variantTask.mustRunAfter(debugJavaCompileTask)
-            }
-            globalTask.dependsOn variantTask
+        if (isBaselineProfileVariantByName(variantName, variantFlavorName)) {
+            return
         }
+
+        if (unitTestName == null) {
+            log.info("Skipping Pitest task creation for variant '${variantName}' because unit tests are not enabled for it.")
+            return
+        }
+
+        PitestTask variantTask = project.tasks.create("${PITEST_TASK_NAME}${variantName.capitalize()}", PitestTask)
+
+        boolean includeMockableAndroidJar = !pitestExtension.excludeMockableAndroidJar.getOrElse(false)
+        if (includeMockableAndroidJar) {
+            addMockableAndroidJarDependencies()
+        }
+
+        Task mockableAndroidJarTask = project.tasks.maybeCreate("pitestMockableAndroidJar", PitestMockableAndroidJarTask)
+        configureTaskDefaultByName(variantTask, variantName, variantDirName, unitTestName, mockableAndroidJarTask.outputJar)
+
+        if (includeMockableAndroidJar) {
+            variantTask.dependsOn mockableAndroidJarTask
+        }
+
+        variantTask.with {
+            description = "Run PIT analysis for java classes, for ${variantName} build variant"
+            group = PITEST_TASK_GROUP
+            shouldRunAfter("test${variantName.capitalize()}UnitTest")
+        }
+        suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
+
+        Task compileSources = project.tasks.findByName("compile${variantName.capitalize()}UnitTestSources")
+        if (compileSources != null) {
+            variantTask.dependsOn compileSources
+        }
+        Task debugJavaCompileTask = project.tasks.findByName("compileDebugJavaWithJavac")
+        if (debugJavaCompileTask != null) {
+            variantTask.mustRunAfter(debugJavaCompileTask)
+        }
+        globalTask.dependsOn variantTask
     }
 
     private static boolean hasLegacyVariants(Project project) {
@@ -468,17 +480,19 @@ class PitestPlugin implements Plugin<Project> {
                 from(kotlinCompileTask.destinationDirectory.asFile)
             }
 
+            Object unitTestVariant = null
             try {
-                variant.unitTestVariant?.with { unitTestVariant ->
-                    Task testKotlinCompileTask = project.tasks.findByName("compile${unitTestVariant.name.capitalize()}Kotlin")
-                    if (testKotlinCompileTask != null) {
-                        from(testKotlinCompileTask.destinationDirectory.asFile)
-                    }
-                    from(getJavaCompileClasspathProviderByName(unitTestVariant.name))
-                    from(getJavaCompileDestinationProviderByName(unitTestVariant.name))
-                }
-            } catch (ignored) {
+                unitTestVariant = variant.unitTestVariant
+            } catch (MissingPropertyException ignored) {
                 // variant may not support unit tests
+            }
+            if (unitTestVariant != null) {
+                Task testKotlinCompileTask = project.tasks.findByName("compile${unitTestVariant.name.capitalize()}Kotlin")
+                if (testKotlinCompileTask != null) {
+                    from(testKotlinCompileTask.destinationDirectory.asFile)
+                }
+                from(getJavaCompileClasspathProviderByName(unitTestVariant.name))
+                from(getJavaCompileDestinationProviderByName(unitTestVariant.name))
             }
             from(getJavaCompileClasspathProviderByName(variant.name))
             from(getJavaCompileDestinationProviderByName(variant.name))
