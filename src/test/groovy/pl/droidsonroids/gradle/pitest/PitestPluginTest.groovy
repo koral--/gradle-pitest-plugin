@@ -159,6 +159,17 @@ class PitestPluginTest extends Specification {
             assert classpath.find { it.toString().endsWith('kotlin-reflect-1.6.10.jar') }
     }
 
+    void "excludeMockableAndroidJar prevents the mockable jar task from being created"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.pitest.excludeMockableAndroidJar = true
+            project.evaluate()
+        then:
+            assert project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}Debug") != null
+            assert project.tasks.findByName("pitestMockableAndroidJar") == null
+    }
+
     void "variant tasks are added on the legacy path when pitest is applied before the Android plugin"() {
         when:
             Project project = AndroidUtils.createSampleApplicationProject(true)

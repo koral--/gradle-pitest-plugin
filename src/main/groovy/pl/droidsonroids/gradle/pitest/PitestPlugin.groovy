@@ -32,10 +32,10 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleVersionIdentifier
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.result.ResolutionResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.attributes.Attribute
-import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
@@ -95,6 +95,7 @@ class PitestPlugin implements Plugin<Project> {
     private PitestPluginExtension pitestExtension
     private Task globalPitestTask
     private boolean newApiVariantTasksEnabled
+    private final Set<String> loggedWarnings = [] as Set
 
     static String sanitizeSdkVersion(String version) {
         return version.replaceAll('[^\\p{Alnum}.-]', '-')
@@ -140,8 +141,10 @@ class PitestPlugin implements Plugin<Project> {
                         if (unitTest != null) {
                             unitTestName = unitTest.name
                         }
-                    } catch (ignored) {
-                        // No unit test support for this variant
+                    } catch (MissingPropertyException ignored) {
+                        //`getUnitTest()` is declared on `Variant` itself in both AGP 8.5 and AGP 9, so this only
+                        //guards against older versions exposing it on a subset of the variant types
+                        log.info("Variant '${variant.name}' does not expose unit tests.")
                     }
 
                     Map<String, Object> variantInfo = [
@@ -234,17 +237,16 @@ class PitestPlugin implements Plugin<Project> {
 
         PitestTask variantTask = project.tasks.create("${PITEST_TASK_NAME}${variantName.capitalize()}", PitestTask)
 
-        boolean includeMockableAndroidJar = !pitestExtension.excludeMockableAndroidJar.getOrElse(false)
-        if (includeMockableAndroidJar) {
+        //`PitestMockableAndroidJarTask.outputJar` resolves the platform `android.jar` under the new DSL, so neither the
+        //task nor the read may happen when the user excluded the mockable JAR to avoid exactly that
+        File mockableAndroidJar = null
+        if (!pitestExtension.excludeMockableAndroidJar.getOrElse(false)) {
             addMockableAndroidJarDependencies()
-        }
-
-        Task mockableAndroidJarTask = project.tasks.maybeCreate("pitestMockableAndroidJar", PitestMockableAndroidJarTask)
-        configureTaskDefaultByName(variantTask, variantName, variantDirName, unitTestName, mockableAndroidJarTask.outputJar)
-
-        if (includeMockableAndroidJar) {
+            Task mockableAndroidJarTask = project.tasks.maybeCreate("pitestMockableAndroidJar", PitestMockableAndroidJarTask)
+            mockableAndroidJar = mockableAndroidJarTask.outputJar
             variantTask.dependsOn mockableAndroidJarTask
         }
+        configureTaskDefaultByName(variantTask, variantName, variantDirName, unitTestName, mockableAndroidJar)
 
         variantTask.with {
             description = "Run PIT analysis for java classes, for ${variantName} build variant"
@@ -254,7 +256,18 @@ class PitestPlugin implements Plugin<Project> {
         suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
 
         //resolved lazily, the tasks may not exist yet when this plugin is applied before `com.android.*`
-        variantTask.dependsOn { project.tasks.findByName("compile${variantName.capitalize()}UnitTestSources") ?: [] }
+        //variants without a unit test component (`com.android.test` modules) have nothing to compile here
+        if (unitTestName != null) {
+            variantTask.dependsOn {
+                String unitTestSourcesTaskName = "compile${variantName.capitalize()}UnitTestSources"
+                Task unitTestSourcesTask = project.tasks.findByName(unitTestSourcesTaskName)
+                if (unitTestSourcesTask == null) {
+                    warnOnce("Task '${unitTestSourcesTaskName}' not found, '${variantTask.name}' may be executed " +
+                            "against stale or missing unit test classes.")
+                }
+                return unitTestSourcesTask ?: []
+            }
+        }
         variantTask.mustRunAfter { project.tasks.findByName("compileDebugJavaWithJavac") ?: [] }
         globalTask.dependsOn variantTask
     }
@@ -360,8 +373,11 @@ class PitestPlugin implements Plugin<Project> {
             if (project.findProperty("android.enableJetifier") != "true") {
                 Configuration runtimeConfig = project.configurations.findByName("${variantName}RuntimeClasspath")
                 if (runtimeConfig != null) {
+                    //`ProjectDependency.getDependencyProject()` was removed in Gradle 9, which AGP 9 requires, so the
+                    //duck-typed `dependency.properties.dependencyProject` lookup used before always evaluated to `null`
+                    //there and let project dependencies into the copy, where they cannot be resolved
                     Configuration copiedRuntimeConfig = runtimeConfig.copyRecursive { dependency ->
-                        dependency.properties.dependencyProject == null && dependency.version != null
+                        !ProjectDependency.isInstance(dependency) && dependency.version != null
                     }.shouldResolveConsistentlyWith(runtimeConfig)
 
                     from(copiedRuntimeConfig.incoming.artifactView { view ->
@@ -374,7 +390,7 @@ class PitestPlugin implements Plugin<Project> {
                 Configuration unittestRuntimeConfig = project.configurations.findByName("${variantName}UnitTestRuntimeClasspath")
                 if (unittestRuntimeConfig != null) {
                     Configuration copiedUnittestRuntimeConfig = unittestRuntimeConfig.copyRecursive { dependency ->
-                        dependency.properties.dependencyProject == null && dependency.version != null
+                        !ProjectDependency.isInstance(dependency) && dependency.version != null
                     }.shouldResolveConsistentlyWith(unittestRuntimeConfig)
 
                     from(copiedUnittestRuntimeConfig.incoming.artifactView { view ->
@@ -422,10 +438,10 @@ class PitestPlugin implements Plugin<Project> {
             if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major == 3 && project.findProperty("android.enableJetifier") != "true") {
                 if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.minor < 3) {
                     from(project.configurations["${variant.name}CompileClasspath"].copyRecursive { dependency ->
-                        dependency.properties.dependencyProject == null
+                        !ProjectDependency.isInstance(dependency)
                     })
                     from(project.configurations["${variant.name}UnitTestCompileClasspath"].copyRecursive { dependency ->
-                        dependency.properties.dependencyProject == null
+                        !ProjectDependency.isInstance(dependency)
                     })
                 } else if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.minor < 4) {
                     from(project.configurations["${variant.name}CompileClasspath"])
@@ -438,7 +454,7 @@ class PitestPlugin implements Plugin<Project> {
                 Configuration runtimeConfig = project.configurations.findByName("${variant.name}RuntimeClasspath")
                 if (runtimeConfig != null) {
                     Configuration copiedRuntimeConfig = runtimeConfig.copyRecursive { dependency ->
-                        dependency.properties.dependencyProject == null && dependency.version != null
+                        !ProjectDependency.isInstance(dependency) && dependency.version != null
                     }.shouldResolveConsistentlyWith(runtimeConfig)
 
                     from(copiedRuntimeConfig.incoming.artifactView { view ->
@@ -451,7 +467,7 @@ class PitestPlugin implements Plugin<Project> {
                 Configuration unittestRuntimeConfig = project.configurations.findByName("${variant.name}UnitTestRuntimeClasspath")
                 if (unittestRuntimeConfig != null) {
                     Configuration copiedUnittestRuntimeConfig = unittestRuntimeConfig.copyRecursive { dependency ->
-                        dependency.properties.dependencyProject == null && dependency.version != null
+                        !ProjectDependency.isInstance(dependency) && dependency.version != null
                     }.shouldResolveConsistentlyWith(unittestRuntimeConfig)
 
                     from(copiedUnittestRuntimeConfig.incoming.artifactView { view ->
@@ -556,7 +572,7 @@ class PitestPlugin implements Plugin<Project> {
             additionalClasspathFile.set(new File(project.buildDir, PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME))
             mutableCodePaths.setFrom({
                 Object additionalMutableCodePaths = pitestExtension.additionalMutableCodePaths ?: [] as Set
-                JavaCompile javaCompileTask = getJavaCompileTask(project, variantName)
+                JavaCompile javaCompileTask = findJavaCompileTask(variantName)
                 if (javaCompileTask != null) {
                     additionalMutableCodePaths.add(javaCompileTask.destinationDirectory.asFile)
                 }
@@ -598,17 +614,35 @@ class PitestPlugin implements Plugin<Project> {
         return isBaselineProfileVariantByName(variant.name as String, variant.flavorName as String)
     }
 
+    //the task does not exist for every variant and is looked up by name, so all three call sites have to agree on
+    //what a miss means, otherwise the same cause surfaces as an empty classpath here and as a provider without a value
+    //(`Cannot query the value of this provider`) there
+    private JavaCompile findJavaCompileTask(String variantName) {
+        JavaCompile javaCompileTask = getJavaCompileTask(project, variantName)
+        if (javaCompileTask == null) {
+            warnOnce("Task 'compile${variantName.capitalize()}JavaWithJavac' not found, Java classes of variant " +
+                    "'${variantName}' will not be put on the Pitest classpath nor mutated.")
+        }
+        return javaCompileTask
+    }
+
+    private void warnOnce(String message) {
+        if (loggedWarnings.add(message)) {
+            log.warn(message)
+        }
+    }
+
     private Provider<FileCollection> getJavaCompileClasspathProviderByName(String variantName) {
         return project.provider {
-            JavaCompile task = getJavaCompileTask(project, variantName)
+            JavaCompile task = findJavaCompileTask(variantName)
             return task?.classpath ?: project.files()
         }
     }
 
-    private Provider<Directory> getJavaCompileDestinationProviderByName(String variantName) {
+    private Provider<FileCollection> getJavaCompileDestinationProviderByName(String variantName) {
         return project.provider {
-            JavaCompile task = getJavaCompileTask(project, variantName)
-            return task?.destinationDirectory?.get()
+            JavaCompile task = findJavaCompileTask(variantName)
+            return task != null ? project.files(task.destinationDirectory) : project.files()
         }
     }
 
