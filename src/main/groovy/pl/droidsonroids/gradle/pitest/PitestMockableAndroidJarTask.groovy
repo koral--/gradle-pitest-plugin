@@ -32,19 +32,25 @@ class PitestMockableAndroidJarTask extends DefaultTask {
     File getOutputJar() {
         String suffix = returnDefaultValues ? "-default-values" : ""
         String outputJarFilename = "pitest-${PitestPlugin.sanitizeSdkVersion(compileSdkName)}${suffix}.jar"
-        return new File(project.buildDir, outputJarFilename)
+        return new File(project.layout.buildDirectory.asFile.get(), outputJarFilename)
     }
 
     @Internal
     protected boolean isReturnDefaultValues() {
-        return project.extensions.findByName("android").testOptions.unitTests.returnDefaultValues
+        return project.extensions.findByName("android")?.testOptions?.unitTests?.returnDefaultValues ?: false
     }
 
     @Internal
     protected String getCompileSdkName() {
         Object android = project.extensions.findByName("android")
-        if (android?.hasProperty("compileSdkVersion")) {
+        if (android?.hasProperty("compileSdkVersion") && android.compileSdkVersion != null) {
             return android.compileSdkVersion as String
+        }
+        if (android?.hasProperty("compileSdk") && android.compileSdk != null) {
+            return "android-${android.compileSdk}"
+        }
+        if (android?.hasProperty("compileSdkPreview") && android.compileSdkPreview != null) {
+            return android.compileSdkPreview as String
         }
         //the platform `android.jar` lives in `<sdk>/platforms/<compileSdkVersion>/`
         return androidJarFromSdkComponents().parentFile.name

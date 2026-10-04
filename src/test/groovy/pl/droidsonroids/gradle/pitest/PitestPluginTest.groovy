@@ -189,4 +189,16 @@ class PitestPluginTest extends Specification {
             project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}Debug") != null
     }
 
+    void "supports new DSL compileSdk property when creating mockable android jar"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.android.compileSdk = 31
+            project.evaluate()
+        then:
+            Task mockableTask = project.tasks.findByName("pitestMockableAndroidJar")
+            assert mockableTask != null
+            assert mockableTask.outputJar.name == "pitest-android-31.jar"
+    }
+
 }

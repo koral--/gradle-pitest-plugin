@@ -23,6 +23,7 @@ import com.android.build.gradle.DynamicFeaturePlugin
 import com.android.build.gradle.LibraryPlugin
 import com.android.build.gradle.TestPlugin
 import com.vdurmont.semver4j.Semver
+import com.vdurmont.semver4j.SemverException
 import groovy.transform.CompileDynamic
 import groovy.transform.PackageScope
 import org.gradle.api.Action
@@ -75,11 +76,11 @@ class PitestPlugin implements Plugin<Project> {
         try {
             Class<?> clazz = PitestPlugin.classLoader.loadClass("com.android.Version")
             return new Semver(clazz.getField("ANDROID_GRADLE_PLUGIN_VERSION").get(null) as String)
-        } catch (ReflectiveOperationException ignored) {
+        } catch (ReflectiveOperationException | SemverException ignored) {
             try {
                 Class<?> clazz = PitestPlugin.classLoader.loadClass("com.android.builder.model.Version")
                 return new Semver(clazz.getField("ANDROID_GRADLE_PLUGIN_VERSION").get(null) as String)
-            } catch (ReflectiveOperationException ignored2) {
+            } catch (ReflectiveOperationException | SemverException ignored2) {
                 return new Semver("0.0.0")
             }
         }
@@ -127,8 +128,13 @@ class PitestPlugin implements Plugin<Project> {
         }
 
         List<Map<String, Object>> collectedVariantInfos = []
+        boolean callbacksRegistered = false
 
         Action<Plugin> registerVariantCallbacks = {
+            if (callbacksRegistered) {
+                return
+            }
+            callbacksRegistered = true
             AndroidComponentsExtension androidComponents = project.extensions.findByType(AndroidComponentsExtension)
             if (androidComponents != null) {
                 androidComponents.onVariants(androidComponents.selector().all()) { variant ->
@@ -162,7 +168,8 @@ class PitestPlugin implements Plugin<Project> {
                 }
             }
         }
-        ["com.android.application", "com.android.library", "com.android.dynamic-feature", "com.android.test"].each { String pluginId ->
+        ["com.android.application", "com.android.library", "com.android.dynamic-feature",
+         "com.android.test", "com.android.kotlin.multiplatform.library"].each { String pluginId ->
             project.plugins.withId(pluginId, registerVariantCallbacks)
         }
 
@@ -511,7 +518,7 @@ class PitestPlugin implements Plugin<Project> {
 
     private void configureCommonTaskProperties(PitestTask task, String variantName, FileCollection combinedTaskClasspath) {
         task.with {
-            defaultFileForHistoryData.set(new File(project.buildDir, PIT_HISTORY_DEFAULT_FILE_NAME))
+            defaultFileForHistoryData.set(new File(project.layout.buildDirectory.asFile.get(), PIT_HISTORY_DEFAULT_FILE_NAME))
             testPlugin.set(pitestExtension.testPlugin)
             reportDir.set(pitestExtension.reportDir.dir(variantName))
             targetClasses.set(project.providers.provider {
@@ -569,9 +576,12 @@ class PitestPlugin implements Plugin<Project> {
                 return filteredCombinedTaskClasspath
             } as Callable<FileCollection>, pitestExtension.testSourceSets.get()*.java.srcDirs.flatten(), pitestExtension.testSourceSets.get()*.resources.srcDirs.flatten())
             useAdditionalClasspathFile.set(pitestExtension.useClasspathFile)
-            additionalClasspathFile.set(new File(project.buildDir, PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME))
+            additionalClasspathFile.set(new File(project.layout.buildDirectory.asFile.get(), PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME))
             mutableCodePaths.setFrom({
-                Object additionalMutableCodePaths = pitestExtension.additionalMutableCodePaths ?: [] as Set
+                Set<Object> additionalMutableCodePaths = [] as Set
+                if (pitestExtension.additionalMutableCodePaths.isPresent()) {
+                    additionalMutableCodePaths.addAll(pitestExtension.additionalMutableCodePaths.get())
+                }
                 JavaCompile javaCompileTask = findJavaCompileTask(variantName)
                 if (javaCompileTask != null) {
                     additionalMutableCodePaths.add(javaCompileTask.destinationDirectory.asFile)
@@ -580,7 +590,7 @@ class PitestPlugin implements Plugin<Project> {
                 if (kotlinCompileTask != null) {
                     additionalMutableCodePaths.add(kotlinCompileTask.destinationDirectory.asFile)
                 }
-                additionalMutableCodePaths
+                return additionalMutableCodePaths
             } as Callable<Set<File>>)
             historyInputLocation.set(pitestExtension.historyInputLocation)
             historyOutputLocation.set(pitestExtension.historyOutputLocation)
@@ -676,9 +686,9 @@ class PitestPlugin implements Plugin<Project> {
         File mockableJarDirectory
         if (ANDROID_GRADLE_PLUGIN_VERSION_NUMBER.major >= 3) {
             mockableAndroidJarFilename += '.v3'
-            mockableJarDirectory = new File(project.buildDir, "generated")
+            mockableJarDirectory = new File(project.layout.buildDirectory.asFile.get(), "generated")
         } else {
-            mockableJarDirectory = new File(project.rootProject.buildDir, "generated")
+            mockableJarDirectory = new File(project.rootProject.layout.buildDirectory.asFile.get(), "generated")
         }
         mockableAndroidJarFilename += '.jar'
 
