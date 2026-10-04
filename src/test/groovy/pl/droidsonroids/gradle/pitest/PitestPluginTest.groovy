@@ -124,4 +124,81 @@ class PitestPluginTest extends Specification {
             assert version == 'strange-version--0-'
     }
 
+    @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/166")
+    void "wires unit test compilation when pitest is applied before the Android plugin"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject(true)
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            Task pitestDebug = project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}Debug")
+            assert pitestDebug != null
+            assert pitestDebug.taskDependencies.getDependencies(pitestDebug)*.name.contains("compileDebugUnitTestSources")
+    }
+
+    @SuppressWarnings("ImplicitClosureParameter")
+    void "new variant API uses Android style variant directory names"() {
+        when:
+            Project project = AndroidUtils.createSampleApplicationProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            Object classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}freeBlue${File.separator}release") }
+            assert classpath.find { it.toString().endsWith("sourceFolderJavaResources${File.separator}test${File.separator}freeBlue${File.separator}release") }
+    }
+
+    @SuppressWarnings("ImplicitClosureParameter")
+    void "resolves runtime classpath when pitest is applied before the Android plugin"() {
+        when:
+            Project project = AndroidUtils.createSampleApplicationProject(true)
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            Set<File> classpath = project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].additionalClasspath.files
+            assert classpath.find { it.toString().endsWith('kotlin-reflect-1.6.10.jar') }
+    }
+
+    void "excludeMockableAndroidJar prevents the mockable jar task from being created"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.pitest.excludeMockableAndroidJar = true
+            project.evaluate()
+        then:
+            assert project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}Debug") != null
+            assert project.tasks.findByName("pitestMockableAndroidJar") == null
+    }
+
+    void "variant tasks are added on the legacy path when pitest is applied before the Android plugin"() {
+        when:
+            Project project = AndroidUtils.createSampleApplicationProject(true)
+            project.evaluate()
+        then:
+            assert project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease") != null
+    }
+
+    @Issue("https://github.com/koral--/gradle-pitest-plugin/issues/166")
+    void "supports android newDsl flag and androidComponents"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.evaluate()
+        then:
+            project.plugins.hasPlugin(PitestPlugin)
+            project.tasks.findByName("${PitestPlugin.PITEST_TASK_NAME}Debug") != null
+    }
+
+    void "supports new DSL compileSdk property when creating mockable android jar"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.extensions.extraProperties.set("android.newDsl", "true")
+            project.android.compileSdk = 31
+            project.evaluate()
+        then:
+            Task mockableTask = project.tasks.findByName("pitestMockableAndroidJar")
+            assert mockableTask != null
+            assert mockableTask.outputJar.name == "pitest-android-31.jar"
+    }
+
 }
