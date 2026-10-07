@@ -222,9 +222,9 @@ class PitestPlugin implements Plugin<Project> {
         }
     }
 
-    //`SetProperty.empty()` *sets* the property to an empty collection and returns the property itself, so it is always
-    //truthy and cannot be used to tell an unset property from a user configured one. The convention is a `null`
-    //provider (see `PitestPluginExtension`), which makes an unconfigured property simply not present.
+    //`SetProperty.empty()` *sets* the property to an empty collection and returns the property itself, whose Groovy
+    //truth is not an emptiness check, so it cannot tell an unset property from a user configured one. The convention
+    //is a `null` provider (see `PitestPluginExtension`), which makes an unconfigured property simply not present.
     private void setDefaultSourceSets(SetProperty<AndroidSourceSet> sourceSetsProperty, Object androidSourceSets, String name) {
         if (sourceSetsProperty.isPresent()) {
             return
