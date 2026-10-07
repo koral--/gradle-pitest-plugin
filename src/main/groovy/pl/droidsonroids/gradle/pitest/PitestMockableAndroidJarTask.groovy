@@ -22,7 +22,8 @@ class PitestMockableAndroidJarTask extends DefaultTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     File getInputJar() {
         Object android = project.extensions.findByName("android")
-        if (android?.hasProperty("sdkDirectory") && android?.hasProperty("compileSdkVersion")) {
+        if (android?.hasProperty("sdkDirectory") && android.sdkDirectory != null &&
+                android.hasProperty("compileSdkVersion") && android.compileSdkVersion != null) {
             return new File("${android.sdkDirectory}/platforms/${android.compileSdkVersion}/android.jar")
         }
         return androidJarFromSdkComponents()
