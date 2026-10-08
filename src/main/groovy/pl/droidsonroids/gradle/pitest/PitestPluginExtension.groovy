@@ -15,7 +15,7 @@
  */
 package pl.droidsonroids.gradle.pitest
 
-import com.android.build.gradle.api.AndroidSourceSet
+import com.android.build.api.dsl.AndroidSourceSet
 import groovy.transform.CompileStatic
 import org.gradle.api.Action
 import org.gradle.api.Incubating
