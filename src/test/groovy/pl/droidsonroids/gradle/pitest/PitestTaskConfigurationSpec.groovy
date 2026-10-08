@@ -260,7 +260,8 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
     }
 
     private Set<String> assembleMainSourceDirAsStringSet() {
-        return ["java", "resources"].collect { String dirName ->
+        //`kotlin` is passed to PIT as well, otherwise the report renders mutations of Kotlin classes without any source
+        return ["java", "resources", "kotlin"].collect { String dirName ->
             new File(project.projectDir, "src//main//${dirName}")
         }*.absolutePath
     }

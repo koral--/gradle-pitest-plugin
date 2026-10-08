@@ -3,40 +3,48 @@ package pl.droidsonroids.gradle.pitest
 import com.android.builder.testing.MockableJarGenerator
 import groovy.transform.CompileDynamic
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+/**
+ * Generates the mockable `android.jar` PIT runs against.
+ *
+ * All inputs are wired by {@link PitestPlugin} at configuration time. The task deliberately does not touch
+ * `Task.project`, which is unsupported at execution time with the Gradle configuration cache.
+ */
 @CompileDynamic
-class PitestMockableAndroidJarTask extends DefaultTask {
+abstract class PitestMockableAndroidJarTask extends DefaultTask {
 
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
-    File inputJar = new File("${project.android.sdkDirectory}/platforms/${project.android.compileSdkVersion}/android.jar")
+    abstract RegularFileProperty getInputJar()
 
     @OutputFile
-    File getOutputJar() {
-        String suffix = project.android.testOptions.unitTests.returnDefaultValues ? "-default-values" : ""
-        String outputJarFilename = "pitest-${project.android.compileSdkVersion}${suffix}.jar"
-        return new File(project.buildDir, outputJarFilename)
-    }
+    abstract RegularFileProperty getOutputJar()
+
+    @Input
+    abstract Property<Boolean> getReturnDefaultValues()
 
     @TaskAction
     @SuppressWarnings("BuilderMethodWithSideEffects")
     protected void createMockableAndroidJar() {
-        if (!outputJar.parentFile.mkdirs() && !outputJar.parentFile.isDirectory()) {
-            throw new IOException("Could not create directory at ${outputJar.parentFile}")
+        File outputJarFile = outputJar.get().asFile
+        if (!outputJarFile.parentFile.mkdirs() && !outputJarFile.parentFile.isDirectory()) {
+            throw new IOException("Could not create directory at ${outputJarFile.parentFile}")
         }
 
-        if (outputJar.isFile()) {
-            outputJar.delete()
+        if (outputJarFile.isFile()) {
+            outputJarFile.delete()
         }
 
-        boolean returnDefaultValues = project.android.testOptions.unitTests.returnDefaultValues
-        MockableJarGenerator generator = new MockableJarGenerator(returnDefaultValues)
-        generator.createMockableJar(inputJar, outputJar)
+        MockableJarGenerator generator = new MockableJarGenerator(returnDefaultValues.get())
+        generator.createMockableJar(inputJar.get().asFile, outputJarFile)
     }
 
 }
