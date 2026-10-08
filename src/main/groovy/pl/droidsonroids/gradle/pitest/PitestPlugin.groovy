@@ -34,7 +34,6 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ProjectDependency
-import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolutionResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.attributes.Attribute
@@ -420,13 +419,6 @@ class PitestPlugin implements Plugin<Project> {
                             attrs.attribute(Attribute.of("artifactType", String), "jar")
                         }
                     }.files)
-
-                    //`copyRecursive` cannot resolve project dependencies, so the siblings filtered out above are taken
-                    //from the original configuration, which resolves them with the variant's own attributes
-                    from(runtimeConfig.incoming.artifactView { view ->
-                        view.lenient(true)
-                        view.componentFilter { identifier -> ProjectComponentIdentifier.isInstance(identifier) }
-                    }.files)
                 }
 
                 Configuration unittestRuntimeConfig = project.configurations.findByName("${variantName}UnitTestRuntimeClasspath")
@@ -439,13 +431,6 @@ class PitestPlugin implements Plugin<Project> {
                         view.attributes { attrs ->
                             attrs.attribute(Attribute.of("artifactType", String), "jar")
                         }
-                    }.files)
-
-                    //`copyRecursive` cannot resolve project dependencies, so the siblings filtered out above are taken
-                    //from the original configuration, which resolves them with the variant's own attributes
-                    from(unittestRuntimeConfig.incoming.artifactView { view ->
-                        view.lenient(true)
-                        view.componentFilter { identifier -> ProjectComponentIdentifier.isInstance(identifier) }
                     }.files)
                 } else {
                     log.info("Configuration '${variantName}UnitTestRuntimeClasspath' not found (variant may not have unit tests enabled)")
@@ -511,13 +496,6 @@ class PitestPlugin implements Plugin<Project> {
                             attrs.attribute(Attribute.of("artifactType", String), "jar")
                         }
                     }.files)
-
-                    //`copyRecursive` cannot resolve project dependencies, so the siblings filtered out above are taken
-                    //from the original configuration, which resolves them with the variant's own attributes
-                    from(runtimeConfig.incoming.artifactView { view ->
-                        view.lenient(true)
-                        view.componentFilter { identifier -> ProjectComponentIdentifier.isInstance(identifier) }
-                    }.files)
                 }
 
                 Configuration unittestRuntimeConfig = project.configurations.findByName("${variant.name}UnitTestRuntimeClasspath")
@@ -530,13 +508,6 @@ class PitestPlugin implements Plugin<Project> {
                         view.attributes { attrs ->
                             attrs.attribute(Attribute.of("artifactType", String), "jar")
                         }
-                    }.files)
-
-                    //`copyRecursive` cannot resolve project dependencies, so the siblings filtered out above are taken
-                    //from the original configuration, which resolves them with the variant's own attributes
-                    from(unittestRuntimeConfig.incoming.artifactView { view ->
-                        view.lenient(true)
-                        view.componentFilter { identifier -> ProjectComponentIdentifier.isInstance(identifier) }
                     }.files)
                 }
             }
