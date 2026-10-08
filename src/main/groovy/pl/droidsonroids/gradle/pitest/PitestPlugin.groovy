@@ -38,6 +38,7 @@ import org.gradle.api.artifacts.result.ResolutionResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.attributes.Attribute
 import org.gradle.api.file.FileCollection
+import org.gradle.api.file.RegularFile
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.BasePlugin
@@ -65,6 +66,7 @@ class PitestPlugin implements Plugin<Project> {
     public final static String PITEST_TEST_COMPILE_CONFIGURATION_NAME = 'pitestTestCompile'
 
     private final static int AGP_9_MAJOR_VERSION = 9
+    private final static String MOCKABLE_ANDROID_JAR_TASK_NAME = "pitestMockableAndroidJar"
     private final static List<String> ANDROID_PLUGIN_IDS = ["com.android.application", "com.android.library",
                                                             "com.android.dynamic-feature", "com.android.test",
                                                             "com.android.kotlin.multiplatform.library"].asImmutable()
@@ -271,13 +273,11 @@ class PitestPlugin implements Plugin<Project> {
 
         //`PitestMockableAndroidJarTask.outputJar` resolves the platform `android.jar` under the new DSL, so neither the
         //task nor the read may happen when the user excluded the mockable JAR to avoid exactly that
-        Provider<File> mockableAndroidJar = null
+        Provider<RegularFile> mockableAndroidJar = null
         if (!pitestExtension.excludeMockableAndroidJar.getOrElse(false)) {
             addMockableAndroidJarDependencies()
-            Task mockableAndroidJarTask = project.tasks.maybeCreate("pitestMockableAndroidJar", PitestMockableAndroidJarTask)
-            //resolved lazily, `outputJar` looks the platform `android.jar` up under the new DSL and that must not happen
-            //while configuring every task graph (e.g. `gradlew help`), only when a Pitest task is actually executed
-            mockableAndroidJar = project.provider { mockableAndroidJarTask.outputJar }
+            Task mockableAndroidJarTask = createMockableAndroidJarTask()
+            mockableAndroidJar = mockableAndroidJarTask.outputJar
             variantTask.dependsOn mockableAndroidJarTask
         }
         configureTaskDefaultByName(variantTask, variantName, variantDirName, unitTestName, mockableAndroidJar)
@@ -345,7 +345,7 @@ class PitestPlugin implements Plugin<Project> {
                 mockableAndroidJarTask = project.tasks.findByName("mockableAndroidJar")
                 configureTaskDefaultLegacy(variantTask, variant, getMockableAndroidJar(project.android))
             } else {
-                mockableAndroidJarTask = project.tasks.maybeCreate("pitestMockableAndroidJar", PitestMockableAndroidJarTask)
+                mockableAndroidJarTask = createMockableAndroidJarTask()
                 configureTaskDefaultLegacy(variantTask, variant, mockableAndroidJarTask.outputJar)
             }
 
@@ -366,6 +366,72 @@ class PitestPlugin implements Plugin<Project> {
                 variantTask.mustRunAfter(debugJavaCompileTask)
             }
             globalTask.dependsOn variantTask
+        }
+    }
+
+    //`PitestMockableAndroidJarTask` must not read `Task.project` at execution time (unsupported with the configuration
+    //cache), so everything it needs is wired here, lazily: the providers are only resolved once the task is in the
+    //task graph, which keeps the platform `android.jar` lookup out of `gradlew help` and friends
+    @SuppressWarnings("BuilderMethodWithSideEffects")
+    private Task createMockableAndroidJarTask() {
+        Task existingTask = project.tasks.findByName(MOCKABLE_ANDROID_JAR_TASK_NAME)
+        if (existingTask != null) {
+            return existingTask
+        }
+
+        Object android = project.extensions.findByName("android")
+        PitestMockableAndroidJarTask task = project.tasks.create(MOCKABLE_ANDROID_JAR_TASK_NAME, PitestMockableAndroidJarTask)
+        boolean returnDefaultValues = android?.testOptions?.unitTests?.returnDefaultValues ?: false
+        String suffix = returnDefaultValues ? "-default-values" : ""
+
+        task.returnDefaultValues.set(returnDefaultValues)
+        task.inputJar.fileProvider(androidPlatformJarProvider(android))
+        task.outputJar.set(project.layout.buildDirectory.file(compileSdkNameProvider(android).map { String compileSdkName ->
+            return "pitest-${sanitizeSdkVersion(compileSdkName)}${suffix}.jar"
+        }))
+        return task
+    }
+
+    //`sdkDirectory` and `compileSdkVersion` exist only on the legacy `BaseExtension`, the new `CommonExtension` DSL
+    //(the only one available in AGP 9) exposes the platform `android.jar` through `SdkComponents.bootClasspath` instead
+    private Provider<File> androidPlatformJarProvider(Object android) {
+        if (android?.hasProperty("sdkDirectory") && android.sdkDirectory != null &&
+                android.hasProperty("compileSdkVersion") && android.compileSdkVersion != null) {
+            File androidJar = new File("${android.sdkDirectory}/platforms/${android.compileSdkVersion}/android.jar")
+            return project.providers.provider { androidJar }
+        }
+        return androidJarFromSdkComponents()
+    }
+
+    private Provider<String> compileSdkNameProvider(Object android) {
+        String compileSdkName = null
+        if (android?.hasProperty("compileSdkVersion") && android.compileSdkVersion != null) {
+            compileSdkName = android.compileSdkVersion as String
+        } else if (android?.hasProperty("compileSdk") && android.compileSdk != null) {
+            compileSdkName = "android-${android.compileSdk}"
+        } else if (android?.hasProperty("compileSdkPreview") && android.compileSdkPreview != null) {
+            compileSdkName = android.compileSdkPreview as String
+        }
+        if (compileSdkName != null) {
+            String resolvedCompileSdkName = compileSdkName
+            return project.providers.provider { resolvedCompileSdkName }
+        }
+        //the platform `android.jar` lives in `<sdk>/platforms/<compileSdkVersion>/`
+        return androidJarFromSdkComponents().map { File androidJar -> androidJar.parentFile.name }
+    }
+
+    private Provider<File> androidJarFromSdkComponents() {
+        AndroidComponentsExtension androidComponents = project.extensions.findByType(AndroidComponentsExtension)
+        if (androidComponents == null) {
+            throw new GradleException("Cannot locate the Android platform JAR, " +
+                    "no Android plugin applied to project '${project.path}'")
+        }
+        return androidComponents.sdkComponents.bootClasspath.map { List<RegularFile> bootClasspath ->
+            File androidJar = bootClasspath*.asFile.find { File file -> file.name == 'android.jar' }
+            if (androidJar == null) {
+                throw new GradleException("Cannot locate 'android.jar' in the Android boot classpath: ${bootClasspath*.asFile}")
+            }
+            return androidJar
         }
     }
 
@@ -395,7 +461,7 @@ class PitestPlugin implements Plugin<Project> {
     }
 
     @SuppressWarnings(["Instanceof", "UnnecessarySetter", "DuplicateNumberLiteral"])
-    private void configureTaskDefaultByName(PitestTask task, String variantName, String dirName, String unitTestName, Provider<File> mockableAndroidJar) {
+    private void configureTaskDefaultByName(PitestTask task, String variantName, String dirName, String unitTestName, Provider<RegularFile> mockableAndroidJar) {
         FileCollection combinedTaskClasspath = project.files()
 
         combinedTaskClasspath.with {
@@ -456,8 +522,10 @@ class PitestPlugin implements Plugin<Project> {
         configureCommonTaskProperties(task, variantName, combinedTaskClasspath)
     }
 
+    //`mockableAndroidJar` is either a `File` (AGP below 3.2) or a `Provider<RegularFile>` of the generated mockable
+    //JAR, both of which `from` accepts
     @SuppressWarnings(["Instanceof", "UnnecessarySetter", "DuplicateNumberLiteral"])
-    private void configureTaskDefaultLegacy(PitestTask task, Object variant, File mockableAndroidJar) {
+    private void configureTaskDefaultLegacy(PitestTask task, Object variant, Object mockableAndroidJar) {
         if (isBaselineProfileVariantLegacy(variant)) {
             return
         }

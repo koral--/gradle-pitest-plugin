@@ -198,7 +198,7 @@ class PitestPluginTest extends Specification {
         then:
             Task mockableTask = project.tasks.findByName("pitestMockableAndroidJar")
             assert mockableTask != null
-            assert mockableTask.outputJar.name == "pitest-android-31.jar"
+            assert mockableTask.outputJar.get().asFile.name == "pitest-android-31.jar"
     }
 
 }
