@@ -34,6 +34,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolutionResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.attributes.Attribute
@@ -67,6 +68,7 @@ class PitestPlugin implements Plugin<Project> {
 
     private final static int AGP_9_MAJOR_VERSION = 9
     private final static String MOCKABLE_ANDROID_JAR_TASK_NAME = "pitestMockableAndroidJar"
+    private final static String KOTLIN_MAIN_COMPILATION_SUFFIX = "Main"
     private final static List<String> ANDROID_PLUGIN_IDS = ["com.android.application", "com.android.library",
                                                             "com.android.dynamic-feature", "com.android.test",
                                                             "com.android.kotlin.multiplatform.library"].asImmutable()
@@ -285,7 +287,11 @@ class PitestPlugin implements Plugin<Project> {
         variantTask.with {
             description = "Run PIT analysis for java classes, for ${variantName} build variant"
             group = PITEST_TASK_GROUP
-            shouldRunAfter("test${variantName.capitalize()}UnitTest")
+            //`debugUnitTest` -> `testDebugUnitTest`, `androidHostTest` -> `testAndroidHostTest`; resolved lazily because
+            //naming a task that does not exist makes `shouldRunAfter` throw
+            if (unitTestName != null) {
+                shouldRunAfter { project.tasks.findByName("test${unitTestName.capitalize()}") ?: [] }
+            }
         }
         suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
 
@@ -293,7 +299,7 @@ class PitestPlugin implements Plugin<Project> {
         //variants without a unit test component (`com.android.test` modules) have nothing to compile here
         if (unitTestName != null) {
             variantTask.dependsOn {
-                String unitTestSourcesTaskName = "compile${variantName.capitalize()}UnitTestSources"
+                String unitTestSourcesTaskName = "compile${unitTestName.capitalize()}Sources"
                 Task unitTestSourcesTask = project.tasks.findByName(unitTestSourcesTaskName)
                 if (unitTestSourcesTask == null) {
                     warnOnce("Task '${unitTestSourcesTaskName}' not found, '${variantTask.name}' may be executed " +
@@ -372,6 +378,29 @@ class PitestPlugin implements Plugin<Project> {
     //`PitestMockableAndroidJarTask` must not read `Task.project` at execution time (unsupported with the configuration
     //cache), so everything it needs is wired here, lazily: the providers are only resolved once the task is in the
     //task graph, which keeps the platform `android.jar` lookup out of `gradlew help` and friends
+    //Kotlin Multiplatform Android targets name their compile tasks after the compilation (`compileAndroidMain`,
+    //`compileAndroidHostTest`), classic Android modules after the variant (`compileDebugKotlin`)
+    private Task findKotlinCompileTask(String name) {
+        Task kotlinCompileTask = project.tasks.findByName("compile${name.capitalize()}Kotlin")
+        if (kotlinCompileTask != null) {
+            return kotlinCompileTask
+        }
+        Task multiplatformCompileTask = project.tasks.findByName("compile${name.capitalize()}")
+        return multiplatformCompileTask?.hasProperty("destinationDirectory") ? multiplatformCompileTask : null
+    }
+
+    //classic Android modules have `<variant>RuntimeClasspath`, a Kotlin Multiplatform Android target names its
+    //configurations after the target instead of the `<target>Main` compilation its variant is named for, so the
+    //counterpart of `androidMainRuntimeClasspath` is `androidRuntimeClasspath`
+    private Configuration findRuntimeClasspathConfiguration(String name) {
+        Configuration runtimeClasspath = project.configurations.findByName("${name}RuntimeClasspath")
+        if (runtimeClasspath == null && name.endsWith(KOTLIN_MAIN_COMPILATION_SUFFIX)) {
+            String targetName = name.substring(0, name.length() - KOTLIN_MAIN_COMPILATION_SUFFIX.length())
+            runtimeClasspath = project.configurations.findByName("${targetName}RuntimeClasspath")
+        }
+        return runtimeClasspath
+    }
+
     //`AndroidSourceSet.kotlin` does not exist in AGP 3.x/4.x, which the legacy path still supports, and Kotlin
     //Multiplatform Android targets have no `AndroidSourceSet` at all - their sources live in `kotlin.sourceSets`
     private Set<File> resolveSourceDirs(Set<AndroidSourceSet> androidSourceSets, String kotlinSourceSetName) {
@@ -514,7 +543,7 @@ class PitestPlugin implements Plugin<Project> {
             }
 
             if (project.findProperty("android.enableJetifier") != "true") {
-                Configuration runtimeConfig = project.configurations.findByName("${variantName}RuntimeClasspath")
+                Configuration runtimeConfig = findRuntimeClasspathConfiguration(variantName)
                 if (runtimeConfig != null) {
                     //`ProjectDependency.getDependencyProject()` was removed in Gradle 9, which AGP 9 requires, so the
                     //duck-typed `dependency.properties.dependencyProject` lookup used before always evaluated to `null`
@@ -528,9 +557,23 @@ class PitestPlugin implements Plugin<Project> {
                             attrs.attribute(Attribute.of("artifactType", String), "jar")
                         }
                     }.files)
+
+                    //`copyRecursive` drops project dependencies, and a Kotlin Multiplatform Android target has no
+                    //`compile<Variant>JavaWithJavac` whose classpath would carry them instead, so its own classes and
+                    //its siblings' would be missing entirely. These configurations also cannot be resolved without
+                    //asking for an artifact type, their project artifacts are ambiguous otherwise.
+                    from(runtimeConfig.incoming.artifactView { view ->
+                        view.lenient(true)
+                        view.componentFilter { identifier -> ProjectComponentIdentifier.isInstance(identifier) }
+                        view.attributes { attrs ->
+                            attrs.attribute(Attribute.of("artifactType", String), "jar")
+                        }
+                    }.files)
                 }
 
-                Configuration unittestRuntimeConfig = project.configurations.findByName("${variantName}UnitTestRuntimeClasspath")
+                //`debugUnitTest` -> `debugUnitTestRuntimeClasspath`, `androidHostTest` -> `androidHostTestRuntimeClasspath`
+                Configuration unittestRuntimeConfig = unitTestName == null ? null
+                        : findRuntimeClasspathConfiguration(unitTestName)
                 if (unittestRuntimeConfig != null) {
                     Configuration copiedUnittestRuntimeConfig = unittestRuntimeConfig.copyRecursive { dependency ->
                         !ProjectDependency.isInstance(dependency) && dependency.version != null
@@ -541,8 +584,21 @@ class PitestPlugin implements Plugin<Project> {
                             attrs.attribute(Attribute.of("artifactType", String), "jar")
                         }
                     }.files)
+
+                    //`copyRecursive` drops project dependencies, and a Kotlin Multiplatform Android target has no
+                    //`compile<Variant>JavaWithJavac` whose classpath would carry them instead, so its own classes and
+                    //its siblings' would be missing entirely. These configurations also cannot be resolved without
+                    //asking for an artifact type, their project artifacts are ambiguous otherwise.
+                    from(unittestRuntimeConfig.incoming.artifactView { view ->
+                        view.lenient(true)
+                        view.componentFilter { identifier -> ProjectComponentIdentifier.isInstance(identifier) }
+                        view.attributes { attrs ->
+                            attrs.attribute(Attribute.of("artifactType", String), "jar")
+                        }
+                    }.files)
                 } else {
-                    log.info("Configuration '${variantName}UnitTestRuntimeClasspath' not found (variant may not have unit tests enabled)")
+                    log.info("No unit test runtime classpath configuration found for variant '${variantName}' " +
+                            "(it may not have unit tests enabled)")
                 }
             }
             from(project.configurations["pitestRuntimeOnly"])
@@ -551,10 +607,10 @@ class PitestPlugin implements Plugin<Project> {
             from(project.files("${project.buildDir}/intermediates/java_res/${dirName}/out"))
             from(project.files("${project.buildDir}/intermediates/java_res/${dirName}UnitTest/out"))
             from(project.files("${project.buildDir}/intermediates/unitTestConfig/test/${dirName}"))
-            from { project.tasks.findByName("compile${variantName.capitalize()}Kotlin")?.destinationDirectory?.asFile }
+            from { findKotlinCompileTask(variantName)?.destinationDirectory?.asFile }
 
             if (unitTestName != null) {
-                from { project.tasks.findByName("compile${unitTestName.capitalize()}Kotlin")?.destinationDirectory?.asFile }
+                from { findKotlinCompileTask(unitTestName)?.destinationDirectory?.asFile }
                 from(getJavaCompileClasspathProviderByName(unitTestName))
                 from(getJavaCompileDestinationProviderByName(unitTestName))
             }
@@ -733,17 +789,17 @@ class PitestPlugin implements Plugin<Project> {
                 if (javaCompileTask != null) {
                     additionalMutableCodePaths.add(javaCompileTask.destinationDirectory.asFile)
                 }
-                String kotlinCompileTaskName = "compile${variantName.capitalize()}Kotlin"
-                Task kotlinCompileTask = project.tasks.findByName(kotlinCompileTaskName)
+                Task kotlinCompileTask = findKotlinCompileTask(variantName)
                 if (kotlinCompileTask != null) {
                     additionalMutableCodePaths.add(kotlinCompileTask.destinationDirectory.asFile)
                 }
                 //without any of them PIT would report a successful run with zero mutations instead of failing
                 if (additionalMutableCodePaths.isEmpty()) {
                     throw new GradleException("Neither 'compile${variantName.capitalize()}JavaWithJavac' nor " +
-                            "'${kotlinCompileTaskName}' found, there is no compiled code of variant '${variantName}' " +
-                            "to mutate. Set 'pitest.additionalMutableCodePaths' explicitly if the classes are produced " +
-                            "by other tasks.")
+                            "'compile${variantName.capitalize()}Kotlin' nor 'compile${variantName.capitalize()}' " +
+                            "found, there is no compiled code of variant '${variantName}' to mutate. " +
+                            "Set 'pitest.additionalMutableCodePaths' explicitly if the classes are produced by " +
+                            "other tasks.")
                 }
                 return additionalMutableCodePaths
             } as Callable<Set<File>>)
