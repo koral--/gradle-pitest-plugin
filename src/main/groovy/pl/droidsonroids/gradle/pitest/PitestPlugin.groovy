@@ -372,6 +372,49 @@ class PitestPlugin implements Plugin<Project> {
     //`PitestMockableAndroidJarTask` must not read `Task.project` at execution time (unsupported with the configuration
     //cache), so everything it needs is wired here, lazily: the providers are only resolved once the task is in the
     //task graph, which keeps the platform `android.jar` lookup out of `gradlew help` and friends
+    //`AndroidSourceSet.kotlin` does not exist in AGP 3.x/4.x, which the legacy path still supports, and Kotlin
+    //Multiplatform Android targets have no `AndroidSourceSet` at all - their sources live in `kotlin.sourceSets`
+    private Set<File> resolveSourceDirs(Set<AndroidSourceSet> androidSourceSets, String kotlinSourceSetName) {
+        Set<File> resolvedSourceDirs = [] as Set
+        androidSourceSets.each { AndroidSourceSet androidSourceSet ->
+            resolvedSourceDirs.addAll(androidSourceSet.java.srcDirs)
+            resolvedSourceDirs.addAll(androidSourceSet.resources.srcDirs)
+            if (androidSourceSet.hasProperty("kotlin")) {
+                resolvedSourceDirs.addAll(androidSourceSet.kotlin.srcDirs)
+            }
+        }
+        if (resolvedSourceDirs.isEmpty() && kotlinSourceSetName != null) {
+            resolvedSourceDirs.addAll(kotlinSourceDirs(kotlinSourceSetName))
+        }
+        return resolvedSourceDirs
+    }
+
+    //a Kotlin Multiplatform source set carries only its own sources, the shared ones come from the source sets it
+    //`dependsOn` (`androidMain` -> `commonMain`, `androidHostTest` -> `commonTest`), so the chain has to be walked
+    private Set<File> kotlinSourceDirs(String sourceSetName) {
+        Object rootSourceSet = project.extensions.findByName("kotlin")?.sourceSets?.findByName(sourceSetName)
+        if (rootSourceSet == null) {
+            return [] as Set
+        }
+        Set<Object> collectedSourceSets = [] as Set
+        collectKotlinSourceSets(rootSourceSet, collectedSourceSets)
+        Set<File> resolvedSourceDirs = [] as Set
+        collectedSourceSets.each { Object kotlinSourceSet ->
+            resolvedSourceDirs.addAll(kotlinSourceSet.kotlin.srcDirs)
+            resolvedSourceDirs.addAll(kotlinSourceSet.resources.srcDirs)
+        }
+        return resolvedSourceDirs
+    }
+
+    private static void collectKotlinSourceSets(Object kotlinSourceSet, Set<Object> collectedSourceSets) {
+        if (!collectedSourceSets.add(kotlinSourceSet)) {
+            return
+        }
+        kotlinSourceSet.dependsOn.each { Object parentSourceSet ->
+            collectKotlinSourceSets(parentSourceSet, collectedSourceSets)
+        }
+    }
+
     @SuppressWarnings("BuilderMethodWithSideEffects")
     private Task createMockableAndroidJarTask() {
         Task existingTask = project.tasks.findByName(MOCKABLE_ANDROID_JAR_TASK_NAME)
@@ -519,13 +562,19 @@ class PitestPlugin implements Plugin<Project> {
             from(getJavaCompileDestinationProviderByName(variantName))
         }
 
-        configureCommonTaskProperties(task, variantName, combinedTaskClasspath)
+        configureCommonTaskProperties(task, variantName, unitTestName, combinedTaskClasspath)
     }
 
     //`mockableAndroidJar` is either a `File` (AGP below 3.2) or a `Provider<RegularFile>` of the generated mockable
     //JAR, both of which `from` accepts
     @SuppressWarnings(["Instanceof", "UnnecessarySetter", "DuplicateNumberLiteral"])
     private void configureTaskDefaultLegacy(PitestTask task, Object variant, Object mockableAndroidJar) {
+        String unitTestName = null
+        try {
+            unitTestName = variant.unitTestVariant?.name
+        } catch (MissingPropertyException ignored) {
+            //the variant may not support unit tests at all
+        }
         if (isBaselineProfileVariantLegacy(variant)) {
             return
         }
@@ -590,28 +639,22 @@ class PitestPlugin implements Plugin<Project> {
                 from(kotlinCompileTask.destinationDirectory.asFile)
             }
 
-            Object unitTestVariant = null
-            try {
-                unitTestVariant = variant.unitTestVariant
-            } catch (MissingPropertyException ignored) {
-                // variant may not support unit tests
-            }
-            if (unitTestVariant != null) {
-                Task testKotlinCompileTask = project.tasks.findByName("compile${unitTestVariant.name.capitalize()}Kotlin")
+            if (unitTestName != null) {
+                Task testKotlinCompileTask = project.tasks.findByName("compile${unitTestName.capitalize()}Kotlin")
                 if (testKotlinCompileTask != null) {
                     from(testKotlinCompileTask.destinationDirectory.asFile)
                 }
-                from(getJavaCompileClasspathProviderByName(unitTestVariant.name))
-                from(getJavaCompileDestinationProviderByName(unitTestVariant.name))
+                from(getJavaCompileClasspathProviderByName(unitTestName))
+                from(getJavaCompileDestinationProviderByName(unitTestName))
             }
             from(getJavaCompileClasspathProviderByName(variant.name))
             from(getJavaCompileDestinationProviderByName(variant.name))
         }
 
-        configureCommonTaskProperties(task, variant.name, combinedTaskClasspath)
+        configureCommonTaskProperties(task, variant.name, unitTestName, combinedTaskClasspath)
     }
 
-    private void configureCommonTaskProperties(PitestTask task, String variantName, FileCollection combinedTaskClasspath) {
+    private void configureCommonTaskProperties(PitestTask task, String variantName, String unitTestName, FileCollection combinedTaskClasspath) {
         task.with {
             defaultFileForHistoryData.set(new File(project.layout.buildDirectory.asFile.get(), PIT_HISTORY_DEFAULT_FILE_NAME))
             testPlugin.set(pitestExtension.testPlugin)
@@ -653,22 +696,20 @@ class PitestPlugin implements Plugin<Project> {
             excludedGroups.set(pitestExtension.excludedGroups)
             fullMutationMatrix.set(pitestExtension.fullMutationMatrix)
             includedTestMethods.set(pitestExtension.includedTestMethods)
-            Set<AndroidSourceSet> mainSourceSets = pitestExtension.mainSourceSets.getOrElse([] as Set)
-            Set javaSourceSet = mainSourceSets*.java.srcDirs.flatten() as Set
-            Set resourcesSourceSet = mainSourceSets*.resources.srcDirs.flatten() as Set
+            Set<File> mainSourceDirs = resolveSourceDirs(pitestExtension.mainSourceSets.getOrElse([] as Set), variantName)
             sourceDirs.setFrom({
-                Set<File> allSourceDirs = javaSourceSet + resourcesSourceSet
                 //PIT exits with 0 on `Missing required option(s) [sourceDirs]`, so without this the task would report
                 //success without having run any analysis at all
-                if (allSourceDirs.isEmpty()) {
+                if (mainSourceDirs.isEmpty()) {
                     throw new GradleException("No source directories found for variant '${variantName}'. " +
-                            "Set 'pitest.mainSourceSets' explicitly, PIT cannot run without them.")
+                            "Set 'pitest.mainSourceSets' explicitly (Android modules) or make sure the Kotlin source " +
+                            "set '${variantName}' exists (Kotlin Multiplatform modules), PIT cannot run without them.")
                 }
-                return allSourceDirs
+                return mainSourceDirs
             } as Callable<Set<File>>)
             detectInlinedCode.set(pitestExtension.detectInlinedCode)
             timestampedReports.set(pitestExtension.timestampedReports)
-            Set<AndroidSourceSet> testSourceSets = pitestExtension.testSourceSets.getOrElse([] as Set)
+            Set<File> testSourceDirs = resolveSourceDirs(pitestExtension.testSourceSets.getOrElse([] as Set), unitTestName)
             additionalClasspath.setFrom({
                 String splitter = File.separator.replace("\\", "\\\\")
                 FileCollection filteredCombinedTaskClasspath = combinedTaskClasspath.filter { File file ->
@@ -680,7 +721,7 @@ class PitestPlugin implements Plugin<Project> {
                 }
 
                 return filteredCombinedTaskClasspath
-            } as Callable<FileCollection>, testSourceSets*.java.srcDirs.flatten(), testSourceSets*.resources.srcDirs.flatten())
+            } as Callable<FileCollection>, testSourceDirs)
             useAdditionalClasspathFile.set(pitestExtension.useClasspathFile)
             additionalClasspathFile.set(new File(project.layout.buildDirectory.asFile.get(), PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME))
             mutableCodePaths.setFrom({
