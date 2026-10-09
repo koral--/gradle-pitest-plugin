@@ -1,5 +1,6 @@
 package pl.droidsonroids.gradle.pitest
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.gradle.api.Incubating
@@ -7,12 +8,14 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Usage
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.reporting.ReportingExtension
 import org.gradle.api.tasks.TaskCollection
+import org.gradle.util.GradleVersion
 
 import java.util.function.Consumer
 import java.util.stream.Collectors
@@ -43,7 +46,7 @@ class PitestAggregatorPlugin implements Plugin<Project> {
 
         Configuration pitestReportConfiguration = project.configurations.create(PITEST_REPORT_AGGREGATE_CONFIGURATION_NAME).with { configuration ->
             attributes.attribute(Usage.USAGE_ATTRIBUTE, (Usage) project.objects.named(Usage, Usage.JAVA_RUNTIME))
-            visible = false
+            setVisibleFalseOnPassedConfigurationForGradle8(configuration)
             canBeConsumed = false
             canBeResolved = true
             return configuration
@@ -60,9 +63,19 @@ class PitestAggregatorPlugin implements Plugin<Project> {
         }
     }
 
+    @CompileDynamic
+    @Deprecated //remove once Gradle 9 is minimal supported version
+    @SuppressWarnings('GrMethodMayBeStatic')
+    private void setVisibleFalseOnPassedConfigurationForGradle8(Configuration configuration) {
+        //deprecated in Gradle 9.1, no effect since 9.0
+        if (GradleVersion.current() < GradleVersion.version("9.0")) {
+            configuration.visible = false
+        }
+    }
+
     private void configureTaskDefaults(AggregateReportTask aggregateReportTask) {
         aggregateReportTask.with { task ->
-            reportDir.set(new File(getReportBaseDirectory(), PitestPlugin.PITEST_REPORT_DIRECTORY_NAME))
+            reportDir.set(getReportBaseDirectory().map { Directory dir -> dir.dir(PitestPlugin.PITEST_REPORT_DIRECTORY_NAME) })
             reportFile.set(reportDir.file("index.html"))
 
             List<TaskCollection<PitestTask>> pitestTasks = getAllPitestTasks()
@@ -97,11 +110,11 @@ class PitestAggregatorPlugin implements Plugin<Project> {
                 .orElseGet { findPitestExtensionInSubprojects(project) }
     }
 
-    private File getReportBaseDirectory() {
+    private Provider<Directory> getReportBaseDirectory() {
         if (project.extensions.findByType(ReportingExtension)) {
-            return project.extensions.getByType(ReportingExtension).baseDirectory.asFile.get()
+            return project.extensions.getByType(ReportingExtension).baseDirectory
         }
-        return project.layout.buildDirectory.dir("reports").get().asFile
+        return project.layout.buildDirectory.dir("reports")
     }
 
     private List<TaskCollection<PitestTask>> getAllPitestTasks() {
