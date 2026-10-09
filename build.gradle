@@ -1,12 +1,12 @@
+import com.vanniktech.maven.publish.GradlePublishPlugin
+
 plugins {
     id 'com.github.ben-manes.versions' version '0.52.0'
     id 'groovy'
-    id 'maven-publish'
     id 'codenarc'
-    id 'signing'
     id 'java-gradle-plugin'
-    id 'com.gradle.plugin-publish' version '1.2.1'
-    id 'com.vanniktech.maven.publish' version '0.25.3'
+    id 'com.gradle.plugin-publish' version '2.2.1'
+    id 'com.vanniktech.maven.publish' version '0.37.0'
 }
 
 java {
@@ -66,6 +66,18 @@ funcTest.shouldRunAfter test
 check.shouldRunAfter funcTest
 check.dependsOn funcTestClasses     //or more generically: tasks.withType(AbstractCompile)
 publishPlugins.dependsOn funcTest, check
+// Same safeguard for Maven Central (publishToMavenCentral is also used by publishAndReleaseToMavenCentral)
+tasks.matching { it.name in ['publishToMavenCentral', 'publishAndReleaseToMavenCentral', 'publishAllPublicationsToMavenCentralRepository'] }.configureEach { it.dependsOn funcTest, check }
+
+mavenPublishing {
+    configure(new GradlePublishPlugin())
+    // automatic release is driven by the mavenCentralAutomaticPublishing property
+    publishToMavenCentral()
+    // sign only when signing keys are configured (not required for publishToMavenLocal)
+    if (findProperty('signing.keyId') != null || findProperty('signingInMemoryKey') != null) {
+        signAllPublications()
+    }
+}
 
 tasks.register('testReport', TestReport) {
     destinationDir = file("$buildDir/reports/allTests")
