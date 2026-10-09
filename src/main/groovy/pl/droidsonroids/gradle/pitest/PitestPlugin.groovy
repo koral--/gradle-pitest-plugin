@@ -27,6 +27,7 @@ import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
@@ -106,6 +107,7 @@ class PitestPlugin implements Plugin<Project> {
         pitestExtension.useClasspathFile.set(true)
         pitestExtension.verbosity.set("NO_SPINNER")
         pitestExtension.addJUnitPlatformLauncher.set(true)
+        addPitDependencies()
 
         project.pluginManager.apply(BasePlugin)
 
@@ -182,7 +184,6 @@ class PitestPlugin implements Plugin<Project> {
             newApiVariantTasksEnabled = true
             createGlobalPitestTask()
             collectedVariantInfos.each { Map<String, Object> variantInfo -> createPitestTaskForVariantInfo(variantInfo) }
-            addPitDependencies()
         }
     }
 
@@ -684,19 +685,22 @@ class PitestPlugin implements Plugin<Project> {
         }
     }
 
+    //resolved lazily, so `pitest.pitestVersion` can be set anywhere in the build script, not only before afterEvaluate
     private void addPitDependencies() {
-        project.dependencies {
-            String pitestVersion = pitestExtension.pitestVersion.get()
-            log.info("Using PIT: $pitestVersion")
-            pitest "org.pitest:pitest-command-line:$pitestVersion"
-            if (pitestExtension.junit5PluginVersion.isPresent()) {
-                if (pitestExtension.testPlugin.isPresent() && pitestExtension.testPlugin.get() != PITEST_JUNIT5_PLUGIN_NAME) {
-                    log.warn("Specified 'junit5PluginVersion', but other plugin is configured in 'testPlugin' for PIT: '${pitestExtension.testPlugin.get()}'")
-                }
+        project.configurations.named(PITEST_CONFIGURATION_NAME).configure { Configuration pitestConfiguration ->
+            pitestConfiguration.withDependencies { DependencySet dependencies ->
+                String pitestVersion = pitestExtension.pitestVersion.get()
+                log.info("Using PIT: $pitestVersion")
+                dependencies.add(project.dependencies.create("org.pitest:pitest-command-line:$pitestVersion"))
+                if (pitestExtension.junit5PluginVersion.isPresent()) {
+                    if (pitestExtension.testPlugin.isPresent() && pitestExtension.testPlugin.get() != PITEST_JUNIT5_PLUGIN_NAME) {
+                        log.warn("Specified 'junit5PluginVersion', but other plugin is configured in 'testPlugin' for PIT: '${pitestExtension.testPlugin.get()}'")
+                    }
 
-                String junit5PluginDependencyAsString = "org.pitest:pitest-junit5-plugin:${pitestExtension.junit5PluginVersion.get()}"
-                log.info("Adding dependency: ${junit5PluginDependencyAsString}")
-                pitest project.dependencies.create(junit5PluginDependencyAsString)
+                    String junit5PluginDependencyAsString = "org.pitest:pitest-junit5-plugin:${pitestExtension.junit5PluginVersion.get()}"
+                    log.info("Adding dependency: ${junit5PluginDependencyAsString}")
+                    dependencies.add(project.dependencies.create(junit5PluginDependencyAsString))
+                }
             }
         }
     }
