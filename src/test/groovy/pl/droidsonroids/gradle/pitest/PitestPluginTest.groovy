@@ -34,6 +34,11 @@ class PitestPluginTest extends Specification {
         }
     }
 
+    //the dependencies of variant tasks are lazy (closures), so `Task.getDependsOn()` does not list them by name
+    private static Set<String> dependencyNames(Task task) {
+        return task.taskDependencies.getDependencies(task)*.name as Set
+    }
+
     @Issue('https://github.com/szpak/gradle-pitest-plugin/issues/390')
     void "add junit-platform-launcher based on direct test dependencies without creating helper configuration"() {
         given:
@@ -98,8 +103,8 @@ class PitestPluginTest extends Specification {
             Project project = AndroidUtils.createSampleLibraryProject()
             project.evaluate()
         then:
-            assert project.tasks[AndroidUtils.PITEST_RELEASE_TASK_NAME].getDependsOn().find { it == 'compileReleaseUnitTestSources' }
-            assert project.tasks["${PitestPlugin.PITEST_TASK_NAME}Debug"].getDependsOn().find { it == 'compileDebugUnitTestSources' }
+            assert dependencyNames(project.tasks[AndroidUtils.PITEST_RELEASE_TASK_NAME]).contains('compileReleaseUnitTestSources')
+            assert dependencyNames(project.tasks["${PitestPlugin.PITEST_TASK_NAME}Debug"]).contains('compileDebugUnitTestSources')
     }
 
     @SuppressWarnings("ImplicitClosureParameter")
@@ -108,7 +113,7 @@ class PitestPluginTest extends Specification {
             Project project = AndroidUtils.createSampleApplicationProject()
             project.evaluate()
         then:
-            assert project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].getDependsOn().find { it == 'compileFreeBlueReleaseUnitTestSources' }
+            assert dependencyNames(project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"]).contains('compileFreeBlueReleaseUnitTestSources')
     }
 
     @SuppressWarnings("ImplicitClosureParameter")
@@ -186,7 +191,7 @@ class PitestPluginTest extends Specification {
             assert project.tasks.findByName("pitestMockableAndroidJar") == null
     }
 
-    void "variant tasks are added on the legacy path when pitest is applied before the Android plugin"() {
+    void "variant tasks are added when pitest is applied before the Android plugin"() {
         when:
             Project project = AndroidUtils.createSampleApplicationProject(true)
             project.evaluate()
