@@ -1,4 +1,73 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
   "labels": ["dependencies"],
-  "includeForks": true
+  "includeForks": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Default PIT version in the plugin, kept in sync with ext.pitestAggregatorVersion in build.gradle",
+      "managerFilePatterns": ["/^src/main/groovy/pl/droidsonroids/gradle/pitest/PitestPlugin\\.groovy$/"],
+      "matchStrings": ["DEFAULT_PITEST_VERSION = '(?<currentValue>[^']+)'"],
+      "datasourceTemplate": "maven",
+      "depNameTemplate": "org.pitest:pitest-command-line",
+      "packageNameTemplate": "org.pitest:pitest-command-line"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Dependencies of the functional test fixtures (more specific groups below take precedence)",
+      "matchFileNames": ["src/funcTest/resources/**"],
+      "groupName": "funcTest fixtures"
+    },
+    {
+      "description": "AGP in the root build.gradle is the minimum AGP supported by the plugin, bump it manually",
+      "matchFileNames": ["build.gradle"],
+      "matchPackageNames": ["com.android.tools.build:gradle"],
+      "enabled": false
+    },
+    {
+      "description": "The plugin is compiled with Groovy 3 to work on both Gradle 8 and 9",
+      "matchPackageNames": ["org.spockframework:spock-core"],
+      "allowedVersions": "/-groovy-3\\.0$/"
+    },
+    {
+      "description": "CodeNarc 4+ requires Groovy 5, -groovy-x.0 variants require other Groovy versions",
+      "matchPackageNames": ["org.codenarc:CodeNarc"],
+      "allowedVersions": "/^3\\.[0-9.]+$/"
+    },
+    {
+      "description": "nebula-test 11+ requires Groovy 4",
+      "matchPackageNames": ["com.netflix.nebula:nebula-test"],
+      "allowedVersions": "<11"
+    },
+    {
+      "description": "Gradle wrapper must stay on Gradle 8 (Groovy 3 compatibility of the plugin)",
+      "matchDepNames": ["gradle"],
+      "matchManagers": ["gradle-wrapper"],
+      "allowedVersions": "<9"
+    },
+    {
+      "description": "mockk and mockk-agent-jvm must be updated together",
+      "matchPackageNames": ["io.mockk:mockk", "io.mockk:mockk-agent-jvm"],
+      "groupName": "mockk"
+    },
+    {
+      "description": "PIT used by the aggregator and the default PIT version in the plugin must be equal",
+      "matchPackageNames": ["org.pitest:pitest-aggregator", "org.pitest:pitest-command-line"],
+      "groupName": "PIT"
+    },
+    {
+      "description": "KGP 2.4+ rejects AGP 8.5.1 used by the functional tests",
+      "matchFileNames": ["src/funcTest/resources/**"],
+      "matchPackageNames": [
+        "org.jetbrains.kotlin:kotlin-gradle-plugin",
+        "org.jetbrains.kotlin:kotlin-stdlib",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+        "org.jetbrains.kotlin:kotlin-reflect"
+      ],
+      "allowedVersions": "<2.4"
+    }
+  ]
 }
