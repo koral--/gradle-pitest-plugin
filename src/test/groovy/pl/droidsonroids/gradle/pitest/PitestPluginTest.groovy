@@ -34,6 +34,22 @@ class PitestPluginTest extends Specification {
         }
     }
 
+    @Issue('https://github.com/szpak/gradle-pitest-plugin/issues/390')
+    void "add junit-platform-launcher based on direct test dependencies without creating helper configuration"() {
+        given:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.dependencies.add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.10.0")
+        when:
+            project.evaluate()
+            project.configurations.getByName("debugUnitTestRuntimeClasspath").incoming.resolutionResult.allComponents  //triggers withDependencies
+        then:
+            project.configurations.getByName("testRuntimeOnly").dependencies.any { dependency ->
+                dependency.group == "org.junit.platform" && dependency.name == "junit-platform-launcher"
+            }
+        and:
+            project.configurations.findByName("tmpTestImplementation") == null
+    }
+
     void "add pitest tasks to android library project in proper group"() {
         when:
             Project project = AndroidUtils.createSampleLibraryProject()

@@ -32,6 +32,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
@@ -123,7 +124,7 @@ class PitestPlugin implements Plugin<Project> {
         pitestExtension = project.extensions.create("pitest", PitestPluginExtension, project)
         pitestExtension.pitestVersion.set(DEFAULT_PITEST_VERSION)
         pitestExtension.fileExtensionsToFilter.set(DEFAULT_FILE_EXTENSIONS_TO_FILTER_FROM_CLASSPATH)
-        pitestExtension.useClasspathFile.set(false)
+        pitestExtension.useClasspathFile.set(true)
         pitestExtension.verbosity.set("NO_SPINNER")
         pitestExtension.addJUnitPlatformLauncher.set(true)
 
@@ -132,7 +133,7 @@ class PitestPlugin implements Plugin<Project> {
         project.plugins.whenPluginAdded {
             ReportingExtension reportingExtension = project.extensions.findByType(ReportingExtension)
             if (reportingExtension != null) {
-                pitestExtension.reportDir.set(new File(reportingExtension.baseDirectory.get().asFile, "pitest"))
+                pitestExtension.reportDir.set(reportingExtension.baseDirectory.dir("pitest"))
             }
         }
 
@@ -523,7 +524,9 @@ class PitestPlugin implements Plugin<Project> {
     private void createConfigurations() {
         [PITEST_CONFIGURATION_NAME, PITEST_TEST_COMPILE_CONFIGURATION_NAME].each { configuration ->
             project.configurations.maybeCreate(configuration).with {
-                visible = false
+                if (GradleVersion.current() < GradleVersion.version("9.0")) {
+                    visible = false     //deprecated in Gradle 9.1, no effect since 9.0
+                }
                 description = "The PIT libraries to be used for this project."
             }
         }
@@ -602,11 +605,11 @@ class PitestPlugin implements Plugin<Project> {
                 }
             }
             from(project.configurations["pitestRuntimeOnly"])
-            from(project.files("${project.buildDir}/intermediates/sourceFolderJavaResources/${dirName}"))
-            from(project.files("${project.buildDir}/intermediates/sourceFolderJavaResources/test/${dirName}"))
-            from(project.files("${project.buildDir}/intermediates/java_res/${dirName}/out"))
-            from(project.files("${project.buildDir}/intermediates/java_res/${dirName}UnitTest/out"))
-            from(project.files("${project.buildDir}/intermediates/unitTestConfig/test/${dirName}"))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/sourceFolderJavaResources/${dirName}")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/sourceFolderJavaResources/test/${dirName}")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/java_res/${dirName}/out")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/java_res/${dirName}UnitTest/out")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/unitTestConfig/test/${dirName}")))
             from { findKotlinCompileTask(variantName)?.destinationDirectory?.asFile }
 
             if (unitTestName != null) {
@@ -685,11 +688,11 @@ class PitestPlugin implements Plugin<Project> {
                 }
             }
             from(project.configurations["pitestRuntimeOnly"])
-            from(project.files("${project.buildDir}/intermediates/sourceFolderJavaResources/${variant.dirName}"))
-            from(project.files("${project.buildDir}/intermediates/sourceFolderJavaResources/test/${variant.dirName}"))
-            from(project.files("${project.buildDir}/intermediates/java_res/${variant.dirName}/out"))
-            from(project.files("${project.buildDir}/intermediates/java_res/${variant.dirName}UnitTest/out"))
-            from(project.files("${project.buildDir}/intermediates/unitTestConfig/test/${variant.dirName}"))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/sourceFolderJavaResources/${variant.dirName}")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/sourceFolderJavaResources/test/${variant.dirName}")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/java_res/${variant.dirName}/out")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/java_res/${variant.dirName}UnitTest/out")))
+            from(project.files(project.layout.buildDirectory.dir("intermediates/unitTestConfig/test/${variant.dirName}")))
             Task kotlinCompileTask = project.tasks.findByName("compile${variant.name.capitalize()}Kotlin")
             if (kotlinCompileTask != null) {
                 from(kotlinCompileTask.destinationDirectory.asFile)
@@ -712,7 +715,7 @@ class PitestPlugin implements Plugin<Project> {
 
     private void configureCommonTaskProperties(PitestTask task, String variantName, String unitTestName, FileCollection combinedTaskClasspath) {
         task.with {
-            defaultFileForHistoryData.set(new File(project.layout.buildDirectory.asFile.get(), PIT_HISTORY_DEFAULT_FILE_NAME))
+            defaultFileForHistoryData.set(project.layout.buildDirectory.file(PIT_HISTORY_DEFAULT_FILE_NAME))
             testPlugin.set(pitestExtension.testPlugin)
             reportDir.set(pitestExtension.reportDir.dir(variantName))
             targetClasses.set(project.providers.provider {
@@ -779,7 +782,7 @@ class PitestPlugin implements Plugin<Project> {
                 return filteredCombinedTaskClasspath
             } as Callable<FileCollection>, testSourceDirs)
             useAdditionalClasspathFile.set(pitestExtension.useClasspathFile)
-            additionalClasspathFile.set(new File(project.layout.buildDirectory.asFile.get(), PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME))
+            additionalClasspathFile.set(project.layout.buildDirectory.file(PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME))
             mutableCodePaths.setFrom({
                 Set<Object> additionalMutableCodePaths = [] as Set
                 if (pitestExtension.additionalMutableCodePaths.isPresent()) {
@@ -952,10 +955,7 @@ class PitestPlugin implements Plugin<Project> {
                 log.debug("Direct ${testImplementation.name} dependencies (${directDependencies.size()}): ${directDependencies}")
 
                 //copy() seems to copy also something that refers to original configuration and generates StackOverflow on getting components
-                Configuration tmpTestImplementation = project.configurations.maybeCreate("tmpTestImplementation")
-                directDependencies.each { directDependency ->
-                    tmpTestImplementation.dependencies.add(directDependency)
-                }
+                Configuration tmpTestImplementation = project.configurations.detachedConfiguration(directDependencies.toArray(new Dependency[0]))
 
                 ResolutionResult resolutionResult = tmpTestImplementation.incoming.resolutionResult
                 Set<ResolvedComponentResult> allResolvedComponents = resolutionResult.allComponents
