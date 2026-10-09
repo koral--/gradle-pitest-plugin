@@ -1,3 +1,48 @@
+# Unreleased
+
+## Android Gradle Plugin 9 and Gradle 9
+- Support AGP 9 and the new Android DSL (`android.newDsl`) - [#166](https://github.com/koral--/gradle-pitest-plugin/issues/166), https://github.com/koral--/gradle-pitest-plugin/pull/167
+- Support Kotlin Multiplatform Android library targets (`com.android.kotlin.multiplatform.library`); the task is named after the compilation, e.g. `pitestAndroidMain`
+- Support AGP 9 built-in Kotlin and pass Kotlin source directories to PIT
+- Pitest tasks are created from `androidComponents.onVariants` for all supported AGP versions; the legacy variant API code path was removed
+- `pitest<Variant>` tasks are created only for variants that have unit tests enabled. With AGP 9 that means the tested build type only (`debug` by default), see `android.onlyEnableUnitTestForTheTestedBuildType`
+- `pitest<Variant>`, `pitestMockableAndroidJar` and `pitestReportAggregate` are compatible with the configuration cache
+- No deprecation warnings caused by the plugin in the Gradle 9.6 functional tests
+- Functional tests now also run against AGP 9.4.1 and Gradle 9.6.0
+
+## Merged from upstream gradle-pitest-plugin 1.19.0
+- Pass the classpath to PIT in a file by default (`useClasspathFile = true`), which avoids the command line length limit on Windows with large Android classpaths - szpak/gradle-pitest-plugin#237
+- Properly handle input and output encoding as task inputs - szpak/gradle-pitest-plugin#342
+- Use a detached configuration to detect whether junit-platform-launcher is needed - szpak/gradle-pitest-plugin#390
+- `pitestReportAggregate` is compatible with the configuration cache - szpak/gradle-pitest-plugin#381
+
+## Other changes
+- PIT 1.22.1 by default (was 1.19.5)
+- Publish to Maven Central again, via the Central Portal. The last version published there was 0.2.12, while 0.2.13 to 0.2.27 are available only from the Gradle Plugin Portal
+- `pitest.reportDir` defaults to `<reporting base dir>/pitest` as a convention, so a configured value is no longer overwritten when another plugin is applied later
+- `pitestVersion` and `junit5PluginVersion` are read lazily, when the `pitest` configuration is resolved
+- Tasks are registered lazily (`tasks.register`)
+- Remove the `com.vdurmont:semver4j` dependency
+- Add regression tests for #92, #146, #147 and #152
+
+**Compatibility notes**
+1. `useClasspathFile` is enabled by default. To restore the previous behaviour:
+   ```groovy
+   pitest {
+       useClasspathFile = false
+   }
+   ```
+2. With AGP 9, `pitestRelease` (and other non-tested build types) no longer exists by default, because AGP creates unit tests only for the tested build type. Set `android.onlyEnableUnitTestForTheTestedBuildType=false` in `gradle.properties` to get them back.
+3. `pitest<Variant>` tasks no longer declare `mustRunAfter compileDebugJavaWithJavac`.
+4. The plugin applies `reporting-base`.
+5. PIT 1.23.0 and newer moved incremental analysis (`historyInputLocation`, `historyOutputLocation`, `withHistory`/`enableDefaultIncrementalAnalysis`) into a separate plugin. If you set `pitestVersion` to 1.23.0 or newer and use history, add it explicitly:
+   ```groovy
+   dependencies {
+       pitest 'org.pitest:pitest-history-plugin:0.0.1'
+   }
+   ```
+6. Tested with AGP 8.5.1 on Gradle 8.14 and with AGP 9.4.1 on Gradle 9.6.0. The plugin depends on AGP 8.5.1, so builds resolve at least that AGP version.
+
 # 0.2.27 - 2026-03-24
 - Add support for Android Dynamic Feature Module by @ekosuhariyadi in https://github.com/koral--/gradle-pitest-plugin/pull/163
 
