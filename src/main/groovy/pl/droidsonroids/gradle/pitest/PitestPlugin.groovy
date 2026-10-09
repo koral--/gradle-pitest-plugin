@@ -18,8 +18,6 @@ package pl.droidsonroids.gradle.pitest
 import com.android.build.api.dsl.AndroidSourceSet
 import com.android.build.api.variant.AndroidComponentsExtension
 import com.android.build.api.variant.HasUnitTest
-import com.vdurmont.semver4j.Semver
-import com.vdurmont.semver4j.SemverException
 import groovy.transform.CompileDynamic
 import groovy.transform.PackageScope
 import org.gradle.api.Action
@@ -63,7 +61,6 @@ class PitestPlugin implements Plugin<Project> {
     public final static String PITEST_CONFIGURATION_NAME = 'pitest'
     public final static String PITEST_TEST_COMPILE_CONFIGURATION_NAME = 'pitestTestCompile'
 
-    private final static int AGP_9_MAJOR_VERSION = 9
     private final static String MOCKABLE_ANDROID_JAR_TASK_NAME = "pitestMockableAndroidJar"
     private final static String KOTLIN_MAIN_COMPILATION_SUFFIX = "Main"
     private final static List<String> ANDROID_PLUGIN_IDS = ["com.android.application", "com.android.library",
@@ -75,21 +72,6 @@ class PitestPlugin implements Plugin<Project> {
 
     @SuppressWarnings("FieldName")
     private final static Logger log = Logging.getLogger(PitestPlugin)
-    private final static Semver ANDROID_GRADLE_PLUGIN_VERSION_NUMBER = resolveAgpVersion()
-
-    private static Semver resolveAgpVersion() {
-        try {
-            Class<?> clazz = PitestPlugin.classLoader.loadClass("com.android.Version")
-            return new Semver(clazz.getField("ANDROID_GRADLE_PLUGIN_VERSION").get(null) as String)
-        } catch (ReflectiveOperationException | SemverException ignored) {
-            try {
-                Class<?> clazz = PitestPlugin.classLoader.loadClass("com.android.builder.model.Version")
-                return new Semver(clazz.getField("ANDROID_GRADLE_PLUGIN_VERSION").get(null) as String)
-            } catch (ReflectiveOperationException | SemverException ignored2) {
-                return new Semver("0.0.0")
-            }
-        }
-    }
 
     @PackageScope
     //visible for testing
