@@ -278,7 +278,6 @@ class PitestPlugin implements Plugin<Project> {
                     return unitTestSourcesTask ?: []
                 }
             }
-            variantTask.mustRunAfter { project.tasks.findByName("compileDebugJavaWithJavac") ?: [] }
         }
         globalPitestTask.configure { Task globalTask -> globalTask.dependsOn variantTaskProvider }
     }
