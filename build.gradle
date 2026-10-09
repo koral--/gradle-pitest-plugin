@@ -1,7 +1,7 @@
 import com.vanniktech.maven.publish.GradlePublishPlugin
 
 plugins {
-    id 'com.github.ben-manes.versions' version '0.52.0'
+    id 'io.github.ben-manes.versions' version '0.65.0'
     id 'groovy'
     id 'codenarc'
     id 'java-gradle-plugin'
@@ -15,7 +15,7 @@ java {
     }
 }
 
-ext.pitestAggregatorVersion = "1.19.5"   //Must be equal to default PIT version in PitestPlugin
+ext.pitestAggregatorVersion = "1.22.1"   //Must be equal to default PIT version in PitestPlugin
 
 repositories {
     mavenCentral()
@@ -48,11 +48,11 @@ dependencies {
     compileOnly "org.pitest:pitest-aggregator:$pitestAggregatorVersion"
     implementation 'com.android.tools.build:gradle:8.5.1'
 
-    testImplementation('org.spockframework:spock-core:2.4-M6-groovy-3.0') {
+    testImplementation('org.spockframework:spock-core:2.5-groovy-3.0') {
         exclude group: 'org.codehaus.groovy'
     }
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation 'net.bytebuddy:byte-buddy:1.17.5' //for Spying in Spock
+    testImplementation 'net.bytebuddy:byte-buddy:1.18.14' //for Spying in Spock
 
     funcTestImplementation sourceSets.main.output  //to make production plugin classes visible in functional tests (it's not in testCompile configuration)
     funcTestImplementation sourceSets.test.output
@@ -107,6 +107,8 @@ mavenPublishing {
     }
 }
 
+apply from: 'gradle/report-version-consistency-check.gradle'
+
 tasks.register('testReport', TestReport) {
     destinationDir = file("$buildDir/reports/allTests")
     reportOn test, funcTest, funcTestAgp9
@@ -131,7 +133,7 @@ tasks.withType(Test).configureEach { testTask ->
 }
 
 codenarc {
-    toolVersion = "3.5.0"
+    toolVersion = "3.7.0"
 }
 
 tasks.named('codenarcFuncTestAgp9') {
