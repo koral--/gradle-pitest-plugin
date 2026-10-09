@@ -6,3 +6,4 @@ build/
 *.iml
 out/
 local.properties
+*.hprof
