@@ -6,7 +6,7 @@ import nebula.test.functional.ExecutionResult
 @CompileDynamic
 class AggregatorConfigurationCacheFunctionalSpec extends AbstractPitestFunctionalSpec {
 
-    //PitestTask itself is not configuration cache compatible yet, so only the aggregator plugin is checked
+    //the Pitest task is covered by PitestTaskConfigurationCacheFunctionalSpec
     void "should store and reuse configuration cache entry for aggregate report task"() {
         given:
             buildFile << """
