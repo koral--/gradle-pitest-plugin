@@ -124,6 +124,10 @@ codenarc {
     toolVersion = "3.5.0"
 }
 
+tasks.named('codenarcFuncTestAgp9') {
+    compilationClasspath = sourceSets.funcTestAgp9.compileClasspath + sourceSets.funcTestAgp9.output
+}
+
 tasks.register("codenarc") {
     configure {
         dependsOn tasks.withType(CodeNarc)

@@ -225,7 +225,7 @@ class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
     private static void assertAgp9Loaded(ExecutionResult result) {
         String expectedMajor = System.getProperty('expectedAgpMajor')
         assert expectedMajor == '9': "Run through the funcTestAgp9 task, expectedAgpMajor=${expectedMajor}"
-        String line = result.standardOutput.readLines().find { it.contains(AGP_VERSION_MARKER) }
+        String line = result.standardOutput.readLines().find { String outputLine -> outputLine.contains(AGP_VERSION_MARKER) }
         assert line != null: 'AGP version was not printed'
         String version = line.substring(line.indexOf(AGP_VERSION_MARKER) + AGP_VERSION_MARKER.length()).trim()
         assert version.startsWith("${expectedMajor}."): "Expected AGP ${expectedMajor}.x but was ${version}"
@@ -254,8 +254,9 @@ class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
         File report = new File('build/reports/agp9-deprecations.txt')
         report.parentFile.mkdirs()
         report << "[${scenario}] ${blocks.size()} deprecation(s)\n"
-        blocks.each { report << "[${scenario}] ${it}\n---\n" }
-        List<String> ours = blocks.findAll { it.contains('pl.droidsonroids') }
+        blocks.each { String block -> report << "[${scenario}] ${block}\n---\n" }
+        List<String> ours = blocks.findAll { String block -> block.contains('pl.droidsonroids') }
         assert ours.isEmpty(): "Deprecations attributable to the plugin:\n${ours.join('\n---\n')}"
     }
+
 }
