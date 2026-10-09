@@ -53,9 +53,10 @@
       "groupName": "mockk"
     },
     {
-      "description": "PIT used by the aggregator and the default PIT version in the plugin must be equal",
+      "description": "PIT used by the aggregator and the default PIT version in the plugin must be equal. PIT 1.23+ removed the built-in history (historyInputLocation/historyOutputLocation) support",
       "matchPackageNames": ["org.pitest:pitest-aggregator", "org.pitest:pitest-command-line"],
-      "groupName": "PIT"
+      "groupName": "PIT",
+      "allowedVersions": "<1.23"
     },
     {
       "description": "KGP 2.4+ rejects AGP 8.5.1 used by the functional tests",
