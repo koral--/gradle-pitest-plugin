@@ -89,7 +89,6 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
             buildFile << """
                 pitest {
                     timestampedReports = false  //to do not mess with file path on source code in report verification
-                    useClasspathFile = true
                     mainProcessJvmArgs = ["-XX:+UnlockExperimentalVMOptions"]
                 }
             """.stripIndent()

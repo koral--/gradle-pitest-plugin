@@ -26,8 +26,7 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
 
     @SuppressWarnings("JUnitPublicField")
     //public to be used also in functional tests
-    public static final List<String> PIT_PARAMETERS_NAMES_NOT_SET_BY_DEFAULT = ['classPathFile',
-                                                                                'features',
+    public static final List<String> PIT_PARAMETERS_NAMES_NOT_SET_BY_DEFAULT = ['features',
                                                                                 'excludedTestClasses',
                                                                                 'testPlugin',
                                                                                 'threads',
@@ -67,15 +66,19 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
                                                                                 'pluginConfiguration',
     ]
 
-    void "should pass additional classpath to PIT using classPathFile parameter instead of classPath if configured"() {
-        given:
-            project.pitest.useClasspathFile = true
-        and:
-            new File(project.buildDir.absolutePath).mkdir() //in ProjectBuilder "build" directory is not created by default
+    void "should pass additional classpath to PIT using classPathFile parameter instead of classPath by default"() {
         expect:
-            File createClasspathFile = new File(project.buildDir, "pitClasspath")
+            File createClasspathFile = project.layout.buildDirectory.file("pitClasspath").get().asFile
             task.taskArgumentMap()['classPathFile'] == createClasspathFile.absolutePath
             !task.taskArgumentMap()['classPath']
+    }
+
+    void "should pass additional classpath to PIT using classPath parameter instead of classPathFile if classpath file disabled"() {
+        given:
+            project.pitest.useClasspathFile = false
+        expect:
+            task.taskArgumentMap()['classPath']
+            !task.taskArgumentMap()['classPathFile']
     }
 
     void "should pass features configuration to PIT"() {

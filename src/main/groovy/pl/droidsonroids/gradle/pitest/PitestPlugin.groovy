@@ -123,7 +123,7 @@ class PitestPlugin implements Plugin<Project> {
         pitestExtension = project.extensions.create("pitest", PitestPluginExtension, project)
         pitestExtension.pitestVersion.set(DEFAULT_PITEST_VERSION)
         pitestExtension.fileExtensionsToFilter.set(DEFAULT_FILE_EXTENSIONS_TO_FILTER_FROM_CLASSPATH)
-        pitestExtension.useClasspathFile.set(false)
+        pitestExtension.useClasspathFile.set(true)
         pitestExtension.verbosity.set("NO_SPINNER")
         pitestExtension.addJUnitPlatformLauncher.set(true)
 
