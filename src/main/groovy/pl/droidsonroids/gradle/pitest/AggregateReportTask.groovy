@@ -33,7 +33,7 @@ import java.nio.charset.Charset
  */
 @Incubating
 @CompileStatic
-@DisableCachingByDefault(because = "TODO")  //TODO: Issue detected by "validatePlugins" task after upgrade to Gradle 7 - TODO: Report issue or implement
+@DisableCachingByDefault(because = "Not worth caching: it only merges the already generated PIT reports of other modules, which is cheap")
 abstract class AggregateReportTask extends DefaultTask {
 
     @OutputDirectory
