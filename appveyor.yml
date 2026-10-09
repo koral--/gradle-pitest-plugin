@@ -15,7 +15,7 @@ build_script:
   - gradlew.bat assemble --stacktrace
 
 test_script:
-  - gradlew.bat check funcTest --stacktrace --continue -Pcompatibility
+  - gradlew.bat check funcTest funcTestAgp9 --stacktrace --continue -Pcompatibility
 
 environment:
   matrix:
