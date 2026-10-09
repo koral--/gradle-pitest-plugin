@@ -39,6 +39,7 @@ import org.gradle.api.file.RegularFile
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.BasePlugin
+import org.gradle.api.plugins.ReportingBasePlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.reporting.ReportingExtension
@@ -111,12 +112,10 @@ class PitestPlugin implements Plugin<Project> {
 
         project.pluginManager.apply(BasePlugin)
 
-        project.plugins.whenPluginAdded {
-            ReportingExtension reportingExtension = project.extensions.findByType(ReportingExtension)
-            if (reportingExtension != null) {
-                pitestExtension.reportDir.set(reportingExtension.baseDirectory.dir("pitest"))
-            }
-        }
+        //a convention, unlike `set()`, does not overwrite what the user has already configured
+        project.pluginManager.apply(ReportingBasePlugin)
+        ReportingExtension reportingExtension = project.extensions.getByType(ReportingExtension)
+        pitestExtension.reportDir.convention(reportingExtension.baseDirectory.dir(PITEST_REPORT_DIRECTORY_NAME))
 
         List<Map<String, Object>> collectedVariantInfos = []
         boolean callbacksRegistered = false

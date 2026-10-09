@@ -222,4 +222,22 @@ class PitestPluginTest extends Specification {
             assert mockableTask.outputJar.get().asFile.name == "pitest-android-31.jar"
     }
 
+    void "reportDir defaults to the pitest directory in reports"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+        then:
+            project.pitest.reportDir.get().asFile == new File(project.layout.buildDirectory.asFile.get(), "reports/pitest")
+    }
+
+    void "reportDir set by the user is not overwritten when another plugin is applied afterwards"() {
+        given:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            File customReportDir = new File(project.projectDir, "custom-report-dir")
+            project.pitest.reportDir = customReportDir
+        when:
+            project.pluginManager.apply("jacoco")
+        then:
+            project.pitest.reportDir.get().asFile == customReportDir
+    }
+
 }
