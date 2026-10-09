@@ -32,6 +32,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleVersionIdentifier
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
@@ -952,10 +953,7 @@ class PitestPlugin implements Plugin<Project> {
                 log.debug("Direct ${testImplementation.name} dependencies (${directDependencies.size()}): ${directDependencies}")
 
                 //copy() seems to copy also something that refers to original configuration and generates StackOverflow on getting components
-                Configuration tmpTestImplementation = project.configurations.maybeCreate("tmpTestImplementation")
-                directDependencies.each { directDependency ->
-                    tmpTestImplementation.dependencies.add(directDependency)
-                }
+                Configuration tmpTestImplementation = project.configurations.detachedConfiguration(directDependencies.toArray(new Dependency[0]))
 
                 ResolutionResult resolutionResult = tmpTestImplementation.incoming.resolutionResult
                 Set<ResolvedComponentResult> allResolvedComponents = resolutionResult.allComponents
