@@ -85,7 +85,7 @@ class PitestPlugin implements Plugin<Project> {
     private Project project
     private PitestPluginExtension pitestExtension
     private TaskProvider<Task> globalPitestTask
-    private boolean newApiVariantTasksEnabled
+    private boolean variantTasksEnabled
     private boolean androidPluginApplied
     private final Set<String> loggedWarnings = [] as Set
 
@@ -153,7 +153,7 @@ class PitestPlugin implements Plugin<Project> {
                             supportsUnitTests: HasUnitTest.isInstance(variant),
                     ]
                     collectedVariantInfos.add(variantInfo)
-                    if (newApiVariantTasksEnabled) {
+                    if (variantTasksEnabled) {
                         createPitestTaskForVariantInfo(variantInfo)
                     }
                 }
@@ -164,8 +164,8 @@ class PitestPlugin implements Plugin<Project> {
         }
 
         project.afterEvaluate {
-            //without an Android plugin there are no variants to attach Pitest tasks to, and the new variant API path
-            //would otherwise create a `pitest` task which silently does nothing
+            //without an Android plugin there are no variants to attach Pitest tasks to, and a `pitest` task
+            //which silently does nothing would be created otherwise
             if (!androidPluginApplied) {
                 throw new GradleException("No Android plugin found in project '${project.path}'. " +
                         "One of ${ANDROID_PLUGIN_IDS} has to be applied together with the Pitest plugin.")
@@ -180,7 +180,7 @@ class PitestPlugin implements Plugin<Project> {
             setDefaultSourceSets(pitestExtension.testSourceSets, androidSourceSets, "test")
 
             // variants collected so far get tasks now; later ones are handled by the onVariants callback
-            newApiVariantTasksEnabled = true
+            variantTasksEnabled = true
             createGlobalPitestTask()
             collectedVariantInfos.each { Map<String, Object> variantInfo -> createPitestTaskForVariantInfo(variantInfo) }
         }
@@ -240,7 +240,7 @@ class PitestPlugin implements Plugin<Project> {
             return
         }
 
-        //`PitestMockableAndroidJarTask.outputJar` resolves the platform `android.jar` under the new DSL, so neither the
+        //`PitestMockableAndroidJarTask.outputJar` resolves the platform `android.jar` through the AGP DSL, so neither the
         //task nor the read may happen when the user excluded the mockable JAR to avoid exactly that
         TaskProvider<PitestMockableAndroidJarTask> mockableAndroidJarTask = null
         if (!pitestExtension.excludeMockableAndroidJar.getOrElse(false)) {
@@ -282,9 +282,6 @@ class PitestPlugin implements Plugin<Project> {
         globalPitestTask.configure { Task globalTask -> globalTask.dependsOn variantTaskProvider }
     }
 
-    //`PitestMockableAndroidJarTask` must not read `Task.project` at execution time (unsupported with the configuration
-    //cache), so everything it needs is wired here, lazily: the providers are only resolved once the task is in the
-    //task graph, which keeps the platform `android.jar` lookup out of `gradlew help` and friends
     //Kotlin Multiplatform Android targets name their compile tasks after the compilation (`compileAndroidMain`,
     //`compileAndroidHostTest`), classic Android modules after the variant (`compileDebugKotlin`)
     private Task findKotlinCompileTask(String name) {
@@ -350,6 +347,9 @@ class PitestPlugin implements Plugin<Project> {
         }
     }
 
+    //`PitestMockableAndroidJarTask` must not read `Task.project` at execution time (unsupported with the configuration
+    //cache), so everything it needs is wired here, lazily: the providers are only resolved once the task is in the
+    //task graph, which keeps the platform `android.jar` lookup out of `gradlew help` and friends
     @SuppressWarnings("BuilderMethodWithSideEffects")
     private TaskProvider<PitestMockableAndroidJarTask> registerMockableAndroidJarTask() {
         if (project.tasks.names.contains(MOCKABLE_ANDROID_JAR_TASK_NAME)) {
