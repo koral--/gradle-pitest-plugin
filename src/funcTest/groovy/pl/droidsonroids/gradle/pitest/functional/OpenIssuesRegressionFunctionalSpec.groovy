@@ -85,6 +85,39 @@ class OpenIssuesRegressionFunctionalSpec extends AbstractPitestFunctionalSpec {
             fileExists('build/reports/pitest/index.html')
     }
 
+    @Issue("https://github.com/szpak/gradle-pitest-plugin/issues/146")
+    void "should aggregate only the reports of the executed debug variant"() {
+        given:
+            writeAggregatedModules()
+        when:
+            ExecutionResult result = runTasks('pitestDebug', 'pitestReportAggregate')
+        then:
+            !result.standardError.contains(VALIDATION_ERROR)
+            result.success
+            result.wasExecuted(':module1:pitestDebug')
+            result.wasExecuted(':pitestReportAggregate')
+            !result.wasExecuted(':module1:pitestRelease')
+            fileExists('module1/build/reports/pitest/debug/mutations.xml')
+            !fileExists('module1/build/reports/pitest/release')
+            fileExists('build/reports/pitest/index.html')
+    }
+
+    void "should aggregate reports with the configuration cache and reuse the entry"() {
+        given:
+            writeAggregatedModules()
+        when:
+            ExecutionResult firstResult = runTasks('pitestDebug', 'pitestReportAggregate', '--configuration-cache')
+            ExecutionResult secondResult = runTasks('pitestDebug', 'pitestReportAggregate', '--configuration-cache', '--rerun-tasks')
+        then:
+            firstResult.success
+            firstResult.standardOutput.contains('Configuration cache entry stored.')
+            firstResult.standardOutput.contains('0 problems were found storing the configuration cache.')
+            secondResult.success
+            secondResult.standardOutput.contains('Reusing configuration cache.')
+            secondResult.wasExecuted(':pitestReportAggregate')
+            fileExists('build/reports/pitest/index.html')
+    }
+
     @Issue("https://github.com/szpak/gradle-pitest-plugin/issues/152")
     void "should run pitest together with assembleRelease in a single Kotlin Android app"() {
         given:
@@ -98,6 +131,17 @@ class OpenIssuesRegressionFunctionalSpec extends AbstractPitestFunctionalSpec {
             result.success
             result.wasExecuted(':app:pitestRelease')
             result.wasExecuted(':app:assembleRelease')
+    }
+
+    private void writeAggregatedModules() {
+        writeRootBuildFile()
+        buildFile << """
+            apply plugin: 'pl.droidsonroids.pitest.aggregator'
+        """.stripIndent()
+        settingsFile << "include ':module1', ':module2'\n"
+        ['module1', 'module2'].each { String name ->
+            writeKotlinAndroidModule(name)
+        }
     }
 
     private void writeRootBuildFile() {

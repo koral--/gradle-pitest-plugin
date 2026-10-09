@@ -9,9 +9,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.attributes.Usage
 import org.gradle.api.file.Directory
-import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileCollection
-import org.gradle.api.file.RegularFile
 import org.gradle.api.provider.Provider
 import org.gradle.api.reporting.ReportingExtension
 import org.gradle.api.tasks.TaskCollection
@@ -82,8 +80,8 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             sourceDirs.from = collectSourceDirs(pitestTasks)
             additionalClasspath.from = collectClasspathDirs(pitestTasks)
 
-            mutationFiles.from = collectMutationFiles(pitestTasks)
-            lineCoverageFiles.from = collectLineCoverageFiles(pitestTasks)
+            mutationFiles.from(collectReportFiles(pitestTasks, MUTATION_FILE_NAME))
+            lineCoverageFiles.from(collectReportFiles(pitestTasks, LINE_COVERAGE_FILE_NAME))
             findPluginExtension().ifPresent({ PitestPluginExtension extension ->
                 inputCharset.set(extension.inputCharset)
                 outputCharset.set(extension.outputCharset)
@@ -138,24 +136,14 @@ class PitestAggregatorPlugin implements Plugin<Project> {
             }.collect(Collectors.toList())
     }
 
-    private static Set<Provider<RegularFile>> collectMutationFiles(List<TaskCollection<PitestTask>> pitestTasks) {
-        return pitestTasks.stream()
-                .flatMap { tc ->
-                    tc.stream()
-                            .map { task -> task.reportDir }
-                }
-                .map { DirectoryProperty reportDir -> reportDir.file(MUTATION_FILE_NAME) }
-            .collect(Collectors.toSet())
-    }
-
-    private static Set<Provider<RegularFile>> collectLineCoverageFiles(List<TaskCollection<PitestTask>> pitestTasks) {
-        return pitestTasks.stream()
-                .flatMap { tc ->
-                    tc.stream()
-                            .map { task -> task.reportDir }
-                }
-            .map { DirectoryProperty reportDir -> reportDir.file(LINE_COVERAGE_FILE_NAME) }
-            .collect(Collectors.toSet())
+    //Resolved lazily to plain files (without the producer task of reportDir), so running only some pitest<Variant> tasks
+    //together with pitestReportAggregate does not trigger the remaining ones. Missing files are skipped in AggregateReportTask.
+    private Provider<List<File>> collectReportFiles(List<TaskCollection<PitestTask>> pitestTasks, String fileName) {
+        return project.provider {
+            pitestTasks.collectMany { TaskCollection<PitestTask> tc ->
+                tc.collect { PitestTask task -> task.reportDir.file(fileName).get().asFile }
+            }
+        }
     }
 
     private static Optional<PitestPluginExtension> findPitestExtensionInSubprojects(Project project) {

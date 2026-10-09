@@ -3,6 +3,7 @@ package pl.droidsonroids.gradle.pitest
 import groovy.transform.CompileDynamic
 import org.gradle.api.Project
 import org.gradle.api.Task
+import spock.lang.Issue
 import spock.lang.Specification
 
 import java.nio.charset.StandardCharsets
@@ -66,6 +67,23 @@ class PitestAggregatorPluginTest extends Specification {
         and:
             !inputProperties.containsKey('inputCharset')
             !inputProperties.containsKey('outputCharset')
+    }
+
+    @Issue("https://github.com/szpak/gradle-pitest-plugin/issues/146")
+    void "not depend on pitest tasks and collect report files of all variants lazily"() {
+        given:
+            project = AndroidUtils.createSampleLibraryProject()
+            project.pluginManager.apply(PitestAggregatorPlugin.PLUGIN_ID)
+        when:
+            project.evaluate()
+            AggregateReportTask aggregateTask = project.tasks.named(PitestAggregatorPlugin.PITEST_REPORT_AGGREGATE_TASK_NAME).get()
+            Set<String> dependencyNames = aggregateTask.taskDependencies.getDependencies(aggregateTask)*.name as Set
+            Set<String> mutationFiles = aggregateTask.mutationFiles.files*.path as Set
+        then:
+            dependencyNames.intersect(['pitest', 'pitestDebug', 'pitestRelease']).isEmpty()
+        and:
+            mutationFiles.any { String path -> path.endsWith('pitest/debug/mutations.xml') }
+            mutationFiles.any { String path -> path.endsWith('pitest/release/mutations.xml') }
     }
 
 //    void "use pitest version from subproject project configuration"() {}    //TODO: Can be implemented with ProjectBuilder? withParent()?
