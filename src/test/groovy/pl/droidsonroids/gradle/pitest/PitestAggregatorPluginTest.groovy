@@ -3,7 +3,6 @@ package pl.droidsonroids.gradle.pitest
 import groovy.transform.CompileDynamic
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
 
 import java.nio.charset.StandardCharsets
@@ -12,7 +11,7 @@ import java.nio.charset.StandardCharsets
 @SuppressWarnings("PrivateFieldCouldBeFinal")
 class PitestAggregatorPluginTest extends Specification {
 
-    private Project project = ProjectBuilder.builder().build()
+    private Project project = AndroidUtils.projectBuilder().build()
 
     void "add aggregate report task to project in proper group"() {
         when:

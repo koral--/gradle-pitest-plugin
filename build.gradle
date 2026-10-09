@@ -114,6 +114,11 @@ tasks.register('testReport', TestReport) {
     reportOn test, funcTest, funcTestAgp9
 }
 
+tasks.named('test') {
+    //Shared by all ProjectBuilder tests (survives "clean") to not re-download the same artifacts for every test
+    systemProperty('projectBuilder.gradleUserHome', "$rootDir/.gradle/project-builder-user-home")
+}
+
 tasks.withType(Test).configureEach { testTask ->
     testTask.configure {
         useJUnitPlatform()
