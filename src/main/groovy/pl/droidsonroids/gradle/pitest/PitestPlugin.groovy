@@ -41,6 +41,7 @@ import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.SetProperty
 import org.gradle.api.reporting.ReportingExtension
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.util.GradleVersion
 
@@ -81,7 +82,7 @@ class PitestPlugin implements Plugin<Project> {
 
     private Project project
     private PitestPluginExtension pitestExtension
-    private Task globalPitestTask
+    private TaskProvider<Task> globalPitestTask
     private boolean newApiVariantTasksEnabled
     private boolean androidPluginApplied
     private final Set<String> loggedWarnings = [] as Set
@@ -212,17 +213,17 @@ class PitestPlugin implements Plugin<Project> {
 
     @SuppressWarnings("BuilderMethodWithSideEffects")
     private void createGlobalPitestTask() {
-        globalPitestTask = project.tasks.create(PITEST_TASK_NAME)
-        globalPitestTask.with {
-            description = "Run PIT analysis for java classes, for all build variants"
-            group = PITEST_TASK_GROUP
-            shouldRunAfter("test")
+        globalPitestTask = project.tasks.register(PITEST_TASK_NAME) { Task task ->
+            task.with {
+                description = "Run PIT analysis for java classes, for all build variants"
+                group = PITEST_TASK_GROUP
+                shouldRunAfter("test")
+            }
         }
     }
 
     @SuppressWarnings("BuilderMethodWithSideEffects")
     private void createPitestTaskForVariantInfo(Map<String, Object> variantInfo) {
-        Task globalTask = globalPitestTask
         String variantName = variantInfo.name as String
         String variantFlavorName = variantInfo.flavorName as String
         String variantDirName = variantInfo.dirName as String
@@ -239,45 +240,47 @@ class PitestPlugin implements Plugin<Project> {
             return
         }
 
-        PitestTask variantTask = project.tasks.create("${PITEST_TASK_NAME}${variantName.capitalize()}", PitestTask)
-
         //`PitestMockableAndroidJarTask.outputJar` resolves the platform `android.jar` under the new DSL, so neither the
         //task nor the read may happen when the user excluded the mockable JAR to avoid exactly that
-        Provider<RegularFile> mockableAndroidJar = null
+        TaskProvider<PitestMockableAndroidJarTask> mockableAndroidJarTask = null
         if (!pitestExtension.excludeMockableAndroidJar.getOrElse(false)) {
             addMockableAndroidJarDependencies()
-            Task mockableAndroidJarTask = createMockableAndroidJarTask()
-            mockableAndroidJar = mockableAndroidJarTask.outputJar
-            variantTask.dependsOn mockableAndroidJarTask
+            mockableAndroidJarTask = registerMockableAndroidJarTask()
         }
-        configureTaskDefaultByName(variantTask, variantName, variantDirName, unitTestName, mockableAndroidJar)
-
-        variantTask.with {
-            description = "Run PIT analysis for java classes, for ${variantName} build variant"
-            group = PITEST_TASK_GROUP
-            //`debugUnitTest` -> `testDebugUnitTest`, `androidHostTest` -> `testAndroidHostTest`; resolved lazily because
-            //naming a task that does not exist makes `shouldRunAfter` throw
-            if (unitTestName != null) {
-                shouldRunAfter { project.tasks.findByName("test${unitTestName.capitalize()}") ?: [] }
+        TaskProvider<PitestTask> variantTaskProvider = project.tasks.register("${PITEST_TASK_NAME}${variantName.capitalize()}", PitestTask) { PitestTask variantTask ->
+            Provider<RegularFile> mockableAndroidJar = mockableAndroidJarTask?.flatMap { PitestMockableAndroidJarTask jarTask -> jarTask.outputJar }
+            if (mockableAndroidJarTask != null) {
+                variantTask.dependsOn mockableAndroidJarTask
             }
-        }
-        suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
+            configureTaskDefaultByName(variantTask, variantName, variantDirName, unitTestName, mockableAndroidJar)
 
-        //resolved lazily, the tasks may not exist yet when this plugin is applied before `com.android.*`
-        //variants without a unit test component (`com.android.test` modules) have nothing to compile here
-        if (unitTestName != null) {
-            variantTask.dependsOn {
-                String unitTestSourcesTaskName = "compile${unitTestName.capitalize()}Sources"
-                Task unitTestSourcesTask = project.tasks.findByName(unitTestSourcesTaskName)
-                if (unitTestSourcesTask == null) {
-                    warnOnce("Task '${unitTestSourcesTaskName}' not found, '${variantTask.name}' may be executed " +
-                            "against stale or missing unit test classes.")
+            variantTask.with {
+                description = "Run PIT analysis for java classes, for ${variantName} build variant"
+                group = PITEST_TASK_GROUP
+                //`debugUnitTest` -> `testDebugUnitTest`, `androidHostTest` -> `testAndroidHostTest`; resolved lazily because
+                //naming a task that does not exist makes `shouldRunAfter` throw
+                if (unitTestName != null) {
+                    shouldRunAfter { project.tasks.findByName("test${unitTestName.capitalize()}") ?: [] }
                 }
-                return unitTestSourcesTask ?: []
             }
+            suppressPassingDeprecatedTestPluginForNewerPitVersions(variantTask)
+
+            //resolved lazily, the tasks may not exist yet when this plugin is applied before `com.android.*`
+            //variants without a unit test component (`com.android.test` modules) have nothing to compile here
+            if (unitTestName != null) {
+                variantTask.dependsOn {
+                    String unitTestSourcesTaskName = "compile${unitTestName.capitalize()}Sources"
+                    Task unitTestSourcesTask = project.tasks.findByName(unitTestSourcesTaskName)
+                    if (unitTestSourcesTask == null) {
+                        warnOnce("Task '${unitTestSourcesTaskName}' not found, '${variantTask.name}' may be executed " +
+                                "against stale or missing unit test classes.")
+                    }
+                    return unitTestSourcesTask ?: []
+                }
+            }
+            variantTask.mustRunAfter { project.tasks.findByName("compileDebugJavaWithJavac") ?: [] }
         }
-        variantTask.mustRunAfter { project.tasks.findByName("compileDebugJavaWithJavac") ?: [] }
-        globalTask.dependsOn variantTask
+        globalPitestTask.configure { Task globalTask -> globalTask.dependsOn variantTaskProvider }
     }
 
     //`PitestMockableAndroidJarTask` must not read `Task.project` at execution time (unsupported with the configuration
@@ -349,23 +352,22 @@ class PitestPlugin implements Plugin<Project> {
     }
 
     @SuppressWarnings("BuilderMethodWithSideEffects")
-    private Task createMockableAndroidJarTask() {
-        Task existingTask = project.tasks.findByName(MOCKABLE_ANDROID_JAR_TASK_NAME)
-        if (existingTask != null) {
-            return existingTask
+    private TaskProvider<PitestMockableAndroidJarTask> registerMockableAndroidJarTask() {
+        if (project.tasks.names.contains(MOCKABLE_ANDROID_JAR_TASK_NAME)) {
+            return project.tasks.named(MOCKABLE_ANDROID_JAR_TASK_NAME, PitestMockableAndroidJarTask)
         }
 
-        Object android = project.extensions.findByName("android")
-        PitestMockableAndroidJarTask task = project.tasks.create(MOCKABLE_ANDROID_JAR_TASK_NAME, PitestMockableAndroidJarTask)
-        boolean returnDefaultValues = android?.testOptions?.unitTests?.returnDefaultValues ?: false
-        String suffix = returnDefaultValues ? "-default-values" : ""
+        return project.tasks.register(MOCKABLE_ANDROID_JAR_TASK_NAME, PitestMockableAndroidJarTask) { PitestMockableAndroidJarTask task ->
+            Object android = project.extensions.findByName("android")
+            boolean returnDefaultValues = android?.testOptions?.unitTests?.returnDefaultValues ?: false
+            String suffix = returnDefaultValues ? "-default-values" : ""
 
-        task.returnDefaultValues.set(returnDefaultValues)
-        task.inputJar.fileProvider(androidPlatformJarProvider(android))
-        task.outputJar.set(project.layout.buildDirectory.file(compileSdkNameProvider(android).map { String compileSdkName ->
-            return "pitest-${sanitizeSdkVersion(compileSdkName)}${suffix}.jar"
-        }))
-        return task
+            task.returnDefaultValues.set(returnDefaultValues)
+            task.inputJar.fileProvider(androidPlatformJarProvider(android))
+            task.outputJar.set(project.layout.buildDirectory.file(compileSdkNameProvider(android).map { String compileSdkName ->
+                return "pitest-${sanitizeSdkVersion(compileSdkName)}${suffix}.jar"
+            }))
+        }
     }
 
     //`sdkDirectory` and `compileSdkVersion` exist only on the legacy `BaseExtension`, the new `CommonExtension` DSL
