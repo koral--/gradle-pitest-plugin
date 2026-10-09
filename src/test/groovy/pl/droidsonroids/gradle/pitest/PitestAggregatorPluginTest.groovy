@@ -6,6 +6,8 @@ import org.gradle.api.Task
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
 
+import java.nio.charset.StandardCharsets
+
 @CompileDynamic
 @SuppressWarnings("PrivateFieldCouldBeFinal")
 class PitestAggregatorPluginTest extends Specification {
@@ -45,6 +47,26 @@ class PitestAggregatorPluginTest extends Specification {
             project.configurations.named(PitestAggregatorPlugin.PITEST_REPORT_AGGREGATE_CONFIGURATION_NAME).get().incoming.dependencies.find { dep ->
                 dep.version == testPitestVersion
             }
+    }
+
+    void "expose configured charsets as strings in aggregate task inputs"() {
+        given:
+            project.pluginManager.apply("java")
+            project.pluginManager.apply(PitestPlugin.PLUGIN_ID)
+            PitestPluginExtension extension = project.extensions.findByType(PitestPluginExtension)
+            extension.inputCharset.set(StandardCharsets.UTF_8)
+            extension.outputCharset.set(StandardCharsets.ISO_8859_1)
+        when:
+            project.pluginManager.apply(PitestAggregatorPlugin.PLUGIN_ID)
+        and:
+            Map<String, Object> inputProperties = project.tasks
+                .named(PitestAggregatorPlugin.PITEST_REPORT_AGGREGATE_TASK_NAME).get().inputs.properties
+        then:
+            inputProperties['inputCharsetString'] == "UTF-8"
+            inputProperties['outputCharsetString'] == "ISO-8859-1"
+        and:
+            !inputProperties.containsKey('inputCharset')
+            !inputProperties.containsKey('outputCharset')
     }
 
 //    void "use pitest version from subproject project configuration"() {}    //TODO: Can be implemented with ProjectBuilder? withParent()?
