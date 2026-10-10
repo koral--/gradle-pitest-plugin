@@ -64,10 +64,10 @@ class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
             ExecutionResult tasksResult = runTasksSuccessfully('tasks', '--all', WARNING_MODE_ALL)
         then:
             assertAgp9Loaded(tasksResult)
-            tasksResult.standardOutput.contains('pitestFreeDebug')
-            tasksResult.standardOutput.contains('pitestPaidDebug')
-            !tasksResult.standardOutput.contains('pitestFreeRelease')
-            !tasksResult.standardOutput.contains('pitestPaidRelease')
+            listsTask(tasksResult, 'pitestFreeDebug')
+            listsTask(tasksResult, 'pitestPaidDebug')
+            !listsTask(tasksResult, 'pitestFreeRelease')
+            !listsTask(tasksResult, 'pitestPaidRelease')
         when:
             ExecutionResult result = runTasksSuccessfully('pitest', WARNING_MODE_ALL)
         then:
@@ -188,6 +188,117 @@ class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
             assertNoPluginDeprecations(second, 'configuration cache, second run')
     }
 
+    void "should create and run pitestRelease with onlyEnableUnitTestForTheTestedBuildType disabled on AGP 9"() {
+        given:
+            writeAndroidLibraryBuildFile()
+            copyResources('testProjects/mockableAndroidJar', '')
+            createFile('gradle.properties') << 'android.onlyEnableUnitTestForTheTestedBuildType=false\n'
+        when:
+            ExecutionResult result = runTasksSuccessfully('pitestRelease', WARNING_MODE_ALL)
+        then:
+            assertAgp9Loaded(result)
+            result.wasExecuted(':pitestRelease')
+            result.standardOutput.contains('Generated 1 mutations Killed 1 (100%)')
+            fileExists('build/reports/pitest/release')
+            assertNoPluginDeprecations(result, 'release')
+    }
+
+    void "should create and run pitestFreeRelease in application with flavors with onlyEnableUnitTestForTheTestedBuildType disabled on AGP 9"() {
+        given:
+            buildFile << """
+                apply plugin: 'com.android.application'
+                apply plugin: 'pl.droidsonroids.pitest'
+                println "${AGP_VERSION_MARKER}" + com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
+
+                android {
+                    namespace = 'pl.drodsonroids.pitest'
+                    compileSdk = 34
+                    defaultConfig {
+                        minSdk = 21
+                        targetSdk = 34
+                    }
+                    flavorDimensions += 'tier'
+                    productFlavors {
+                        free { dimension = 'tier' }
+                        paid { dimension = 'tier' }
+                    }
+                }
+                ${getCommonBuildFilePart('gradle.pitest.test')}
+                dependencies {
+                    testImplementation 'junit:junit:4.13.2'
+                }
+            """.stripIndent()
+            writeHelloPitClass()
+            writeHelloPitTest()
+            createFile('gradle.properties') << 'android.onlyEnableUnitTestForTheTestedBuildType=false\n'
+        when:
+            ExecutionResult tasksResult = runTasksSuccessfully('tasks', '--all', WARNING_MODE_ALL)
+        then:
+            listsTask(tasksResult, 'pitestFreeRelease')
+            listsTask(tasksResult, 'pitestPaidRelease')
+        when:
+            ExecutionResult result = runTasksSuccessfully('pitestFreeRelease', WARNING_MODE_ALL)
+        then:
+            result.wasExecuted(':pitestFreeRelease')
+            !result.wasExecuted(':pitestPaidRelease')
+            result.standardOutput.contains('Generated 2 mutations Killed 1 (50%)')
+            assertNoPluginDeprecations(result, 'flavored release')
+    }
+
+    void "should aggregate debug reports with the configuration cache and reuse it on AGP 9"() {
+        given:
+            buildFile << """
+                apply plugin: 'pl.droidsonroids.pitest.aggregator'
+                println "${AGP_VERSION_MARKER}" + com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION
+                ${getCommonBuildFilePart('gradle.pitest.test')}
+            """.stripIndent()
+            settingsFile << "include ':module1', ':module2'\n"
+            ['module1', 'module2'].each { String name ->
+                File moduleDir = new File(projectDir, name)
+                createFile("${name}/build.gradle") << """
+                    apply plugin: 'com.android.library'
+                    apply plugin: 'pl.droidsonroids.pitest'
+
+                    android {
+                        namespace = 'pl.drodsonroids.pitest.${name}'
+                        compileSdk = 34
+                        defaultConfig {
+                            minSdk = 21
+                        }
+                    }
+                    ${getCommonBuildFilePart('gradle.pitest.test')}
+                    dependencies {
+                        testImplementation 'junit:junit:4.13.2'
+                    }
+                    pitest {
+                        targetClasses = ['gradle.pitest.test.*']
+                        outputFormats = ['HTML', 'XML']
+                        exportLineCoverage = true
+                        timestampedReports = false
+                    }
+                """.stripIndent()
+                createFile("${name}/src/main/AndroidManifest.xml") << '<?xml version="1.0" encoding="utf-8"?><manifest />'
+                writeHelloPitClass("gradle.pitest.test.${name}", moduleDir)
+                writeHelloPitTest("gradle.pitest.test.${name}", moduleDir)
+            }
+        when:
+            ExecutionResult first = runTasksSuccessfully('pitestDebug', 'pitestReportAggregate', '--configuration-cache', WARNING_MODE_ALL)
+        then:
+            assertAgp9Loaded(first)
+            first.standardOutput.contains('Configuration cache entry stored.')
+            !first.standardOutput.contains('problems were found')
+            !first.standardOutput.contains('problem was found')
+            first.wasExecuted(':pitestReportAggregate')
+            fileExists('build/reports/pitest/index.html')
+            assertNoPluginDeprecations(first, 'aggregator configuration cache, first run')
+        when:
+            ExecutionResult second = runTasksSuccessfully('pitestDebug', 'pitestReportAggregate', '--configuration-cache', '--rerun-tasks', WARNING_MODE_ALL)
+        then:
+            second.standardOutput.contains('Reusing configuration cache.')
+            second.wasExecuted(':pitestReportAggregate')
+            assertNoPluginDeprecations(second, 'aggregator configuration cache, second run')
+    }
+
     private void writeAndroidLibraryBuildFile() {
         buildFile << """
             apply plugin: 'com.android.library'
@@ -220,6 +331,11 @@ class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
                 mavenCentral()
             }
         """.stripIndent()
+    }
+
+    //Not a plain contains(), because the output also echoes the names of test directories
+    private static boolean listsTask(ExecutionResult result, String taskName) {
+        return result.standardOutput.readLines().any { String line -> line.startsWith("${taskName} - ") }
     }
 
     private static void assertAgp9Loaded(ExecutionResult result) {
