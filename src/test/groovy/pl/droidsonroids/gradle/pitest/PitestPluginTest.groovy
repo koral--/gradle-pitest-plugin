@@ -156,6 +156,16 @@ class PitestPluginTest extends Specification {
             assert pitestDebug.taskDependencies.getDependencies(pitestDebug)*.name.contains("compileDebugUnitTestSources")
     }
 
+    void "use a separate classpath file for every variant to not break tasks running in parallel"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.evaluate()
+        then:
+            File debugFile = project.tasks.getByName('pitestDebug').additionalClasspathFile.get().asFile
+            File releaseFile = project.tasks.getByName('pitestRelease').additionalClasspathFile.get().asFile
+            debugFile != releaseFile
+    }
+
     @SuppressWarnings("ImplicitClosureParameter")
     void "new variant API uses Android style variant directory names"() {
         when:

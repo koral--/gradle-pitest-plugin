@@ -64,7 +64,7 @@ class BasicProjectBuilderSpec extends Specification {
     private static void touchEmptyPitClasspathFileWorkaround(Project project) {
         DirectoryProperty buildDirectoryProperty = project.layout.buildDirectory
         buildDirectoryProperty.get().asFile.mkdirs()
-        buildDirectoryProperty.file(PitestPlugin.PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME).get().asFile.createNewFile()
+        buildDirectoryProperty.file("${PitestPlugin.PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME}Release".toString()).get().asFile.createNewFile()
     }
 
 }

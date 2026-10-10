@@ -88,7 +88,7 @@ The aggregator collects the reports of all `pitest<variant>` tasks. To aggregate
 tasks, eg. `./gradlew pitestDebug pitestReportAggregate`.
 
 ## Classpath file
-The classpath is passed to PIT in a file (`build/pitClasspath`) by default, to avoid the command line length limit on
+The classpath is passed to PIT in a file (`build/pitClasspath<Variant>`) by default, to avoid the command line length limit on
 Windows. To pass it on the command line instead, set `useClasspathFile = false`.
 
 ## Incremental analysis with PIT 1.23+

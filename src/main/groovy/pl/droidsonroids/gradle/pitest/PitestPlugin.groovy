@@ -600,7 +600,8 @@ class PitestPlugin implements Plugin<Project> {
                 return filteredCombinedTaskClasspath
             } as Callable<FileCollection>, testSourceDirs)
             useAdditionalClasspathFile.set(pitestExtension.useClasspathFile)
-            additionalClasspathFile.set(project.layout.buildDirectory.file(PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME))
+            //a file per variant, as the tasks of different variants can run in parallel
+            additionalClasspathFile.set(project.layout.buildDirectory.file("${PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME}${variantName.capitalize()}".toString()))
             mutableCodePaths.setFrom({
                 Set<Object> additionalMutableCodePaths = [] as Set
                 if (pitestExtension.additionalMutableCodePaths.isPresent()) {

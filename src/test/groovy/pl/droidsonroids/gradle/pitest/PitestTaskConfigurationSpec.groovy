@@ -69,7 +69,7 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
 
     void "should pass additional classpath to PIT using classPathFile parameter instead of classPath by default"() {
         expect:
-            File createClasspathFile = project.layout.buildDirectory.file("pitClasspath").get().asFile
+            File createClasspathFile = project.layout.buildDirectory.file("pitClasspathRelease").get().asFile
             task.taskArgumentMap()['classPathFile'] == createClasspathFile.absolutePath
             !task.taskArgumentMap()['classPath']
     }

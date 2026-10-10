@@ -105,7 +105,7 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
 
         and: "use file to pass additional classpath to PIT if enabled"  //Needed? Already tested with ProjectBuilder in PitestTaskConfigurationSpec
             result.getStandardOutput().contains(
-                "--classPathFile=${new File(projectDir, "build//${PitestPlugin.PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME}").absolutePath}")
+                "--classPathFile=${new File(projectDir, "build//${PitestPlugin.PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME}Release").absolutePath}")
             !result.getStandardOutput().find("--classPath=")
 
         and: "use defined mainProcessJvmArgs to run PIT main process"
