@@ -145,6 +145,13 @@
       "allowedVersions": "<9"
     },
     {
+      "description": "byte-buddy also publishes -jdk5 variants, which Renovate otherwise alternates with the regular releases",
+      "matchPackageNames": [
+        "net.bytebuddy:byte-buddy"
+      ],
+      "allowedVersions": "!/-jdk5$/"
+    },
+    {
       "description": "mockk and mockk-agent-jvm must be updated together",
       "matchPackageNames": [
         "io.mockk:mockk",
