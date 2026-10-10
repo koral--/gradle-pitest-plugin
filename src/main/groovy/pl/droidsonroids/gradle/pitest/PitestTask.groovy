@@ -49,7 +49,7 @@ import java.nio.charset.Charset
 @CacheableTask
 @SuppressWarnings("UnstableApiUsage")
 //@Option
-class PitestTask extends JavaExec {
+abstract class PitestTask extends JavaExec {
 
     @Input
     @Optional
@@ -227,13 +227,19 @@ class PitestTask extends JavaExec {
     @Optional
     final Property<Boolean> useClasspathJar
 
-    @Input
-    @Optional
+    @Internal
     final Property<Charset> inputEncoding
 
     @Input
     @Optional
+    final Provider<String> inputEncodingString
+
+    @Internal
     final Property<Charset> outputEncoding
+
+    @Input
+    @Optional
+    final Provider<String> outputEncodingString
 
     @Input
     @Optional
@@ -310,7 +316,9 @@ class PitestTask extends JavaExec {
         maxSurviving = of.property(Integer)
         useClasspathJar = of.property(Boolean)
         inputEncoding = of.property(Charset)
+        inputEncodingString = inputEncoding.map { Charset charset -> charset.name() }
         outputEncoding = of.property(Charset)
+        outputEncodingString = outputEncoding.map { Charset charset -> charset.name() }
         additionalClasspath = of.fileCollection()
         useAdditionalClasspathFile = of.property(Boolean)
         additionalClasspathFile = of.fileProperty()

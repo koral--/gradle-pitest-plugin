@@ -1,5 +1,7 @@
 version: "{branch} {build}"
 
+skip_branch_with_pr: true
+
 image:
   - Visual Studio 2022
 
@@ -15,7 +17,7 @@ build_script:
   - gradlew.bat assemble --stacktrace
 
 test_script:
-  - gradlew.bat check funcTest --stacktrace --continue -Pcompatibility
+  - gradlew.bat check funcTest funcTestAgp9 --stacktrace --continue
 
 environment:
   matrix:

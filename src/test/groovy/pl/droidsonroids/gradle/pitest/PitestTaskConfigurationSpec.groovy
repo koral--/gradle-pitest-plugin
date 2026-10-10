@@ -16,6 +16,7 @@
 package pl.droidsonroids.gradle.pitest
 
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import groovy.transform.CompileDynamic
 import spock.lang.Issue
 
@@ -26,8 +27,7 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
 
     @SuppressWarnings("JUnitPublicField")
     //public to be used also in functional tests
-    public static final List<String> PIT_PARAMETERS_NAMES_NOT_SET_BY_DEFAULT = ['classPathFile',
-                                                                                'features',
+    public static final List<String> PIT_PARAMETERS_NAMES_NOT_SET_BY_DEFAULT = ['features',
                                                                                 'excludedTestClasses',
                                                                                 'testPlugin',
                                                                                 'threads',
@@ -67,15 +67,19 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
                                                                                 'pluginConfiguration',
     ]
 
-    void "should pass additional classpath to PIT using classPathFile parameter instead of classPath if configured"() {
-        given:
-            project.pitest.useClasspathFile = true
-        and:
-            new File(project.buildDir.absolutePath).mkdir() //in ProjectBuilder "build" directory is not created by default
+    void "should pass additional classpath to PIT using classPathFile parameter instead of classPath by default"() {
         expect:
-            File createClasspathFile = new File(project.buildDir, "pitClasspath")
+            File createClasspathFile = project.layout.buildDirectory.file("pitClasspathRelease").get().asFile
             task.taskArgumentMap()['classPathFile'] == createClasspathFile.absolutePath
             !task.taskArgumentMap()['classPath']
+    }
+
+    void "should pass additional classpath to PIT using classPath parameter instead of classPathFile if classpath file disabled"() {
+        given:
+            project.pitest.useClasspathFile = false
+        expect:
+            task.taskArgumentMap()['classPath']
+            !task.taskArgumentMap()['classPathFile']
     }
 
     void "should pass features configuration to PIT"() {
@@ -249,14 +253,26 @@ class PitestTaskConfigurationSpec extends BasicProjectBuilderSpec implements Wit
 
     void "should set input/output encoding in PIT for input/output charset"() {
         given:
-           String inputEncodingAsString = "ISO-8859-2"
-           String outputEncodingAsString = "ISO-8859-1"
-        and:
-            project.pitest.inputCharset = Charset.forName(inputEncodingAsString)
-            project.pitest.outputCharset = Charset.forName(outputEncodingAsString)
+            project.pitest.inputCharset = StandardCharsets.UTF_8
+            project.pitest.outputCharset = StandardCharsets.ISO_8859_1
         expect:
-            task.taskArgumentMap()['inputEncoding'] == inputEncodingAsString
-            task.taskArgumentMap()['outputEncoding'] == outputEncodingAsString
+            task.taskArgumentMap()['inputEncoding'] == "UTF-8"
+            task.taskArgumentMap()['outputEncoding'] == "ISO-8859-1"
+    }
+
+    @Issue('https://github.com/szpak/gradle-pitest-plugin/issues/342')
+    void "should expose input/output charset as strings in task inputs"() {
+        given:
+            project.pitest.inputCharset = StandardCharsets.UTF_8
+            project.pitest.outputCharset = StandardCharsets.ISO_8859_1
+        when:
+            Map<String, Object> inputProperties = task.inputs.properties
+        then:
+            inputProperties['inputEncodingString'] == "UTF-8"
+            inputProperties['outputEncodingString'] == "ISO-8859-1"
+        and:
+            !inputProperties.containsKey('inputEncoding')
+            !inputProperties.containsKey('outputEncoding')
     }
 
     private Set<String> assembleMainSourceDirAsStringSet() {

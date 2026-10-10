@@ -19,6 +19,7 @@ import groovy.transform.CompileDynamic
 import groovy.transform.PackageScope
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.file.DirectoryProperty
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -45,6 +46,8 @@ class BasicProjectBuilderSpec extends Specification {
         pitestConfig = project.getExtensions().getByType(PitestPluginExtension)
 
         project.group = 'test.group'
+
+        touchEmptyPitClasspathFileWorkaround(project)
     }
 
     protected PitestTask getJustOnePitestTaskOrFail() {
@@ -54,6 +57,14 @@ class BasicProjectBuilderSpec extends Specification {
         assert tasks?.size() == 1: "Expected tasks: '$pitestReleaseTaskName', All tasks: ${project.tasks}"
         assert tasks[0] instanceof PitestTask
         return (PitestTask) tasks[0]
+    }
+
+    //as "useClasspathFile" is enabled by default the tests with ProjectBuilder would fail on a missing file
+    //(alternatively "project.pitest.useClasspathFile = false" could be used)
+    private static void touchEmptyPitClasspathFileWorkaround(Project project) {
+        DirectoryProperty buildDirectoryProperty = project.layout.buildDirectory
+        buildDirectoryProperty.get().asFile.mkdirs()
+        buildDirectoryProperty.file("${PitestPlugin.PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME}Release".toString()).get().asFile.createNewFile()
     }
 
 }
