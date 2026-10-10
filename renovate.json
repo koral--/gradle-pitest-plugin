@@ -1,4 +1,179 @@
 {
-  "labels": ["dependencies"],
-  "includeForks": true
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": [
+    "dependencies"
+  ],
+  "forkProcessing": "enabled",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Default PIT version in the plugin, kept in sync with ext.pitestAggregatorVersion in build.gradle",
+      "managerFilePatterns": [
+        "/^src/main/groovy/pl/droidsonroids/gradle/pitest/PitestPlugin\\.groovy$/"
+      ],
+      "matchStrings": [
+        "DEFAULT_PITEST_VERSION = '(?<currentValue>[^']+)'"
+      ],
+      "datasourceTemplate": "maven",
+      "depNameTemplate": "org.pitest:pitest-command-line",
+      "packageNameTemplate": "org.pitest:pitest-command-line"
+    },
+    {
+      "customType": "regex",
+      "description": "AGP used by the funcTestAgp9 lane (the only AGP version Renovate may bump)",
+      "managerFilePatterns": [
+        "/^build\\.gradle$/"
+      ],
+      "matchStrings": [
+        "ext\\.agp9Version = '(?<currentValue>[^']+)'"
+      ],
+      "datasourceTemplate": "maven",
+      "registryUrlTemplate": "https://dl.google.com/dl/android/maven2/",
+      "depNameTemplate": "com.android.tools.build:gradle",
+      "packageNameTemplate": "com.android.tools.build:gradle"
+    },
+    {
+      "customType": "regex",
+      "description": "Gradle version used by the funcTestAgp9 lane",
+      "managerFilePatterns": [
+        "/^src/funcTestAgp9/.+\\.groovy$/"
+      ],
+      "matchStrings": [
+        "GRADLE_VERSION_FOR_AGP9 = '(?<currentValue>[^']+)'"
+      ],
+      "datasourceTemplate": "gradle-version",
+      "depNameTemplate": "gradle",
+      "packageNameTemplate": "gradle"
+    },
+    {
+      "customType": "regex",
+      "description": "KGP version used by the funcTestAgp9 lane test project (kotlin-test-junit is released together with KGP)",
+      "managerFilePatterns": [
+        "/^src/funcTestAgp9/.+\\.groovy$/"
+      ],
+      "matchStrings": [
+        "org\\.jetbrains\\.kotlin:kotlin-test-junit:(?<currentValue>[^'\"]+)"
+      ],
+      "datasourceTemplate": "maven",
+      "depNameTemplate": "org.jetbrains.kotlin:kotlin-test-junit",
+      "packageNameTemplate": "org.jetbrains.kotlin:kotlin-test-junit"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Dependencies of the functional test fixtures (more specific groups below take precedence)",
+      "matchFileNames": [
+        "src/funcTest/resources/**"
+      ],
+      "groupName": "funcTest fixtures"
+    },
+    {
+      "description": "AGP in the root build.gradle dependencies is the minimum AGP supported by the plugin, bump it manually (the funcTestAgp9 lane version is tracked by a custom manager)",
+      "matchFileNames": [
+        "build.gradle"
+      ],
+      "matchPackageNames": [
+        "com.android.tools.build:gradle"
+      ],
+      "enabled": false,
+      "matchManagers": [
+        "gradle"
+      ]
+    },
+    {
+      "description": "funcTest classpath injection provides AGP 8.5.1, a fixture/spec AGP bump would only create a conflicting classpath",
+      "matchFileNames": [
+        "src/funcTest/**"
+      ],
+      "matchPackageNames": [
+        "com.android.tools.build:gradle"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "The funcTestAgp9 lane tracks AGP 9.x only",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "com.android.tools.build:gradle"
+      ],
+      "allowedVersions": "/^9\\./"
+    },
+    {
+      "description": "The funcTestAgp9 lane runs on Gradle 9 (AGP 9 requires it)",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "gradle"
+      ],
+      "allowedVersions": ">=9"
+    },
+    {
+      "description": "The plugin is compiled with Groovy 3 to work on both Gradle 8 and 9",
+      "matchPackageNames": [
+        "org.spockframework:spock-core"
+      ],
+      "allowedVersions": "/-groovy-3\\.0$/"
+    },
+    {
+      "description": "CodeNarc 4+ requires Groovy 5, -groovy-x.0 variants require other Groovy versions",
+      "matchPackageNames": [
+        "org.codenarc:CodeNarc"
+      ],
+      "allowedVersions": "/^3\\.[0-9.]+$/"
+    },
+    {
+      "description": "nebula-test 11+ requires Groovy 4",
+      "matchPackageNames": [
+        "com.netflix.nebula:nebula-test"
+      ],
+      "allowedVersions": "<11"
+    },
+    {
+      "description": "Gradle wrapper must stay on Gradle 8 (Groovy 3 compatibility of the plugin)",
+      "matchDepNames": [
+        "gradle"
+      ],
+      "matchManagers": [
+        "gradle-wrapper"
+      ],
+      "allowedVersions": "<9"
+    },
+    {
+      "description": "mockk and mockk-agent-jvm must be updated together",
+      "matchPackageNames": [
+        "io.mockk:mockk",
+        "io.mockk:mockk-agent-jvm"
+      ],
+      "groupName": "mockk"
+    },
+    {
+      "description": "PIT used by the aggregator and the default PIT version in the plugin must be equal. PIT 1.23+ removed the built-in history (historyInputLocation/historyOutputLocation) support",
+      "matchPackageNames": [
+        "org.pitest:pitest-aggregator",
+        "org.pitest:pitest-command-line"
+      ],
+      "groupName": "PIT",
+      "allowedVersions": "<1.23"
+    },
+    {
+      "description": "KGP 2.4+ rejects AGP 8.5.1 used by the functional tests",
+      "matchFileNames": [
+        "src/funcTest/resources/**"
+      ],
+      "matchPackageNames": [
+        "org.jetbrains.kotlin:kotlin-gradle-plugin",
+        "org.jetbrains.kotlin:kotlin-stdlib",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk7",
+        "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+        "org.jetbrains.kotlin:kotlin-reflect"
+      ],
+      "allowedVersions": "<2.4"
+    }
+  ]
 }
