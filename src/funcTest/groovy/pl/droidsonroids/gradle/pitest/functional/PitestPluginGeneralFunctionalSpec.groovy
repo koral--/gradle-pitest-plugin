@@ -83,13 +83,42 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
             historyOutputLocation.size()
     }
 
+    void "use history with PIT 1.23+ after adding the pitest-history-plugin"() {
+        given:
+            File historyLocation = tmpDir.file("history").toFile()
+        and:
+            buildFile << getBasicGradlePitestConfig()
+            buildFile << """
+                dependencies {
+                    pitest 'org.pitest:pitest-history-plugin:0.0.1'
+                }
+                pitest {
+                    pitestVersion = '1.30.0'
+                    historyInputLocation = "${quoteBackslashesInWindowsPath(historyLocation)}"
+                    historyOutputLocation = "${quoteBackslashesInWindowsPath(historyLocation)}"
+                }
+            """.stripIndent()
+        and:
+            writeHelloPitClass()
+            writeHelloPitTest()
+        when:
+            ExecutionResult firstResult = runTasksSuccessfully('pitestRelease')
+        then:
+            firstResult.wasExecuted(':pitestRelease')
+            firstResult.standardOutput.contains('Generated 2 mutations Killed 1 (50%)')
+            historyLocation.size()
+        when:
+            ExecutionResult secondResult = runTasksSuccessfully('pitestRelease', '--rerun-tasks')
+        then:
+            secondResult.standardError.contains('Incremental analysis reduced number of mutations by 2')
+    }
+
     void "pass additional configured parameters that cannot be test with ProjectBuilder"() {
         given:
             buildFile << getBasicGradlePitestConfig()
             buildFile << """
                 pitest {
                     timestampedReports = false  //to do not mess with file path on source code in report verification
-                    useClasspathFile = true
                     mainProcessJvmArgs = ["-XX:+UnlockExperimentalVMOptions"]
                 }
             """.stripIndent()
@@ -106,7 +135,7 @@ class PitestPluginGeneralFunctionalSpec extends AbstractPitestFunctionalSpec {
 
         and: "use file to pass additional classpath to PIT if enabled"  //Needed? Already tested with ProjectBuilder in PitestTaskConfigurationSpec
             result.getStandardOutput().contains(
-                "--classPathFile=${new File(projectDir, "build//${PitestPlugin.PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME}").absolutePath}")
+                "--classPathFile=${new File(projectDir, "build//${PitestPlugin.PIT_ADDITIONAL_CLASSPATH_DEFAULT_FILE_NAME}Release").absolutePath}")
             !result.getStandardOutput().find("--classPath=")
 
         and: "use defined mainProcessJvmArgs to run PIT main process"
