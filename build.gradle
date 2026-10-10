@@ -1,12 +1,12 @@
+import com.vanniktech.maven.publish.GradlePublishPlugin
+
 plugins {
-    id 'com.github.ben-manes.versions' version '0.52.0'
+    id 'io.github.ben-manes.versions' version '0.65.0'
     id 'groovy'
-    id 'maven-publish'
     id 'codenarc'
-    id 'signing'
     id 'java-gradle-plugin'
-    id 'com.gradle.plugin-publish' version '1.2.1'
-    id 'com.vanniktech.maven.publish' version '0.25.3'
+    id 'com.gradle.plugin-publish' version '2.2.1'
+    id 'com.vanniktech.maven.publish' version '0.37.0'
 }
 
 java {
@@ -15,7 +15,7 @@ java {
     }
 }
 
-ext.pitestAggregatorVersion = "1.19.5"   //Must be equal to default PIT version in PitestPlugin
+ext.pitestAggregatorVersion = "1.22.1"   //Must be equal to default PIT version in PitestPlugin
 
 repositories {
     mavenCentral()
@@ -23,33 +23,47 @@ repositories {
     google()
 }
 
+ext.agp9Version = '9.4.1'   //Latest stable AGP 9.x, used only by the funcTestAgp9 lane
+
 sourceSets {
     funcTest
+    funcTestAgp9 {
+        //Compiled against the same API as funcTest (AGP 8.5.1), but executed on AGP 9 - see agp9RuntimeClasspath below
+        compileClasspath += sourceSets.funcTest.output + sourceSets.funcTest.compileClasspath
+    }
 }
 
 configurations {
     funcTest.extendsFrom(testImplementation, testRuntimeOnly, implementation)
+    funcTestAgp9Implementation.extendsFrom(funcTestImplementation)
+    funcTestAgp9RuntimeOnly.extendsFrom(funcTestRuntimeOnly)
+    funcTestAgp9RuntimeClasspath {
+        //Single resolution of AGP: the higher requested version (9.x) wins over 8.5.1 brought by "implementation", so no duplicates
+        resolutionStrategy.force "com.android.tools.build:gradle:$agp9Version"
+    }
 }
 
 dependencies {
     implementation localGroovy()
     compileOnly "org.pitest:pitest-aggregator:$pitestAggregatorVersion"
     implementation 'com.android.tools.build:gradle:8.5.1'
-    implementation 'com.vdurmont:semver4j:3.1.0'
 
-    testImplementation('org.spockframework:spock-core:2.4-M6-groovy-3.0') {
+    testImplementation('org.spockframework:spock-core:2.5-groovy-3.0') {
         exclude group: 'org.codehaus.groovy'
     }
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testImplementation 'net.bytebuddy:byte-buddy:1.17.5' //for Spying in Spock
+    testImplementation 'net.bytebuddy:byte-buddy:1.18.14' //for Spying in Spock
 
     funcTestImplementation sourceSets.main.output  //to make production plugin classes visible in functional tests (it's not in testCompile configuration)
     funcTestImplementation sourceSets.test.output
-    funcTestImplementation 'com.vdurmont:semver4j:3.1.0'
     funcTestImplementation 'com.android.tools.build:gradle:8.5.1'
     funcTestImplementation('com.netflix.nebula:nebula-test:10.6.2') {
         exclude group: 'org.codehaus.groovy', module: 'groovy-all'
     }
+
+    funcTestAgp9Implementation "com.android.tools.build:gradle:$agp9Version"
+    //Needed by the Kotlin Multiplatform case, newer than the one brought by AGP (https://kotlinlang.org/docs/gradle-configure-project.html)
+    funcTestAgp9RuntimeOnly 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21'
 }
 
 tasks.register('funcTest', Test) {
@@ -62,14 +76,47 @@ tasks.register('funcTest', Test) {
     systemProperty('ignoreDeprecations', 'true') //FIXME remove after AGP stops using deprecated API
 }
 
+tasks.register('funcTestAgp9', Test) {
+    description = 'Run the functional tests on AGP 9 (new DSL code path).'
+    group = 'Verification'
+    testClassesDirs = sourceSets.funcTestAgp9.output.classesDirs
+    //funcTest classes (base spec) are needed too, AGP 8.5.1 is replaced by AGP 9 in funcTestAgp9RuntimeClasspath
+    classpath = sourceSets.funcTestAgp9.output + sourceSets.funcTest.output + configurations.funcTestAgp9RuntimeClasspath
+    forkEvery 1
+    systemProperty('org.gradle.daemon', 'false')
+    systemProperty('expectedAgpMajor', agp9Version.tokenize('.').first())
+    systemProperty('ignoreDeprecations', 'true') //nebula fails on AGP/KGP ones, the specs check the plugin ones
+    //Deprecations are verified by the specs themselves (only those attributable to this plugin fail the build)
+}
+
 funcTest.shouldRunAfter test
+funcTestAgp9.shouldRunAfter funcTest
 check.shouldRunAfter funcTest
-check.dependsOn funcTestClasses     //or more generically: tasks.withType(AbstractCompile)
-publishPlugins.dependsOn funcTest, check
+check.dependsOn funcTestClasses, funcTestAgp9Classes     //or more generically: tasks.withType(AbstractCompile)
+publishPlugins.dependsOn funcTest, funcTestAgp9, check
+// Same safeguard for Maven Central (publishToMavenCentral is also used by publishAndReleaseToMavenCentral)
+tasks.matching { it.name in ['publishToMavenCentral', 'publishAndReleaseToMavenCentral', 'publishAllPublicationsToMavenCentralRepository'] }.configureEach { it.dependsOn funcTest, funcTestAgp9, check }
+
+mavenPublishing {
+    configure(new GradlePublishPlugin())
+    // automatic release is driven by the mavenCentralAutomaticPublishing property
+    publishToMavenCentral()
+    // sign only when signing keys are configured (not required for publishToMavenLocal)
+    if (findProperty('signing.keyId') != null || findProperty('signingInMemoryKey') != null) {
+        signAllPublications()
+    }
+}
+
+apply from: 'gradle/report-version-consistency-check.gradle'
 
 tasks.register('testReport', TestReport) {
     destinationDir = file("$buildDir/reports/allTests")
-    reportOn test, funcTest
+    reportOn test, funcTest, funcTestAgp9
+}
+
+tasks.named('test') {
+    //Shared by all ProjectBuilder tests (survives "clean") to not re-download the same artifacts for every test
+    systemProperty('projectBuilder.gradleUserHome', "$rootDir/.gradle/project-builder-user-home")
 }
 
 tasks.withType(Test).configureEach { testTask ->
@@ -91,7 +138,11 @@ tasks.withType(Test).configureEach { testTask ->
 }
 
 codenarc {
-    toolVersion = "3.5.0"
+    toolVersion = "3.7.0"
+}
+
+tasks.named('codenarcFuncTestAgp9') {
+    compilationClasspath = sourceSets.funcTestAgp9.compileClasspath + sourceSets.funcTestAgp9.output
 }
 
 tasks.register("codenarc") {
