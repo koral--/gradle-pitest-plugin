@@ -78,12 +78,12 @@ class PitestAggregatorPluginTest extends Specification {
             project.evaluate()
             AggregateReportTask aggregateTask = project.tasks.named(PitestAggregatorPlugin.PITEST_REPORT_AGGREGATE_TASK_NAME).get()
             Set<String> dependencyNames = aggregateTask.taskDependencies.getDependencies(aggregateTask)*.name as Set
-            Set<String> mutationFiles = aggregateTask.mutationFiles.files*.path as Set
+            Set<File> mutationFiles = aggregateTask.mutationFiles.files
         then:
             dependencyNames.intersect(['pitest', 'pitestDebug', 'pitestRelease']).isEmpty()
         and:
-            mutationFiles.any { String path -> path.endsWith('pitest/debug/mutations.xml') }
-            mutationFiles.any { String path -> path.endsWith('pitest/release/mutations.xml') }
+            mutationFiles.contains(project.file('build/reports/pitest/debug/mutations.xml'))
+            mutationFiles.contains(project.file('build/reports/pitest/release/mutations.xml'))
     }
 
 //    void "use pitest version from subproject project configuration"() {}    //TODO: Can be implemented with ProjectBuilder? withParent()?
