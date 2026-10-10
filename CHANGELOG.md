@@ -19,6 +19,8 @@
 ## Other changes
 - PIT 1.22.1 by default (was 1.19.5)
 - Publish to Maven Central again, via the Central Portal. The last version published there was 0.2.12, while 0.2.13 to 0.2.27 are available only from the Gradle Plugin Portal
+- `pitestReportAggregate` no longer depends on the `pitest<variant>` tasks of all modules and skips missing report files, so only the executed ones are aggregated
+- The classpath file is created per variant (`build/pitClasspath<Variant>`), because `pitest<variant>` tasks running in parallel overwrote a shared one
 - `pitest.reportDir` defaults to `<reporting base dir>/pitest` as a convention, so a configured value is no longer overwritten when another plugin is applied later
 - `pitestVersion` and `junit5PluginVersion` are read lazily, when the `pitest` configuration is resolved
 - Tasks are registered lazily (`tasks.register`)

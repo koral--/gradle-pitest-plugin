@@ -84,8 +84,8 @@ pitest {
     timestampedReports = false
 }
 ```
-The aggregator collects the reports of all `pitest<variant>` tasks. To aggregate only one build type, run just those
-tasks, eg. `./gradlew pitestDebug pitestReportAggregate`.
+The aggregator collects the reports of all `pitest<variant>` tasks that were run, it does not trigger them. To aggregate
+only one build type, run just those tasks, eg. `./gradlew pitestDebug pitestReportAggregate`.
 
 ## Classpath file
 The classpath is passed to PIT in a file (`build/pitClasspath<Variant>`) by default, to avoid the command line length limit on
