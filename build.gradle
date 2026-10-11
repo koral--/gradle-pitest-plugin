@@ -34,6 +34,7 @@ sourceSets {
 }
 
 configurations {
+    funcTestImplementation.extendsFrom(implementation)
     funcTest.extendsFrom(testImplementation, testRuntimeOnly, implementation)
     funcTestAgp9Implementation.extendsFrom(funcTestImplementation)
     funcTestAgp9RuntimeOnly.extendsFrom(funcTestRuntimeOnly)
@@ -110,8 +111,10 @@ mavenPublishing {
 apply from: 'gradle/report-version-consistency-check.gradle'
 
 tasks.register('testReport', TestReport) {
-    destinationDir = file("$buildDir/reports/allTests")
-    reportOn test, funcTest, funcTestAgp9
+    destinationDirectory.set(layout.buildDirectory.dir("reports/allTests"))
+    testResults.from(tasks.named('test').flatMap { it.binaryResultsDirectory })
+    testResults.from(tasks.named('funcTest').flatMap { it.binaryResultsDirectory })
+    testResults.from(tasks.named('funcTestAgp9').flatMap { it.binaryResultsDirectory })
 }
 
 tasks.named('test') {
@@ -139,6 +142,10 @@ tasks.withType(Test).configureEach { testTask ->
 
 codenarc {
     toolVersion = "3.7.0"
+}
+
+tasks.named('codenarcFuncTest') {
+    compilationClasspath = sourceSets.funcTest.compileClasspath + sourceSets.funcTest.output
 }
 
 tasks.named('codenarcFuncTestAgp9') {

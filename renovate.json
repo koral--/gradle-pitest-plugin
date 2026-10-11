@@ -64,6 +64,18 @@
   ],
   "packageRules": [
     {
+      "description": "KGP and its test dependency used by the funcTestAgp9 lane must be updated together",
+      "matchPackageNames": [
+        "org.jetbrains.kotlin:kotlin-gradle-plugin",
+        "org.jetbrains.kotlin:kotlin-test-junit"
+      ],
+      "matchFileNames": [
+        "build.gradle",
+        "src/funcTestAgp9/**"
+      ],
+      "groupName": "KGP (AGP 9 lane)"
+    },
+    {
       "description": "Dependencies of the functional test fixtures (more specific groups below take precedence)",
       "matchFileNames": [
         "src/funcTest/resources/**"

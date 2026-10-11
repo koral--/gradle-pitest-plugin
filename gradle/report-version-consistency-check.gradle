@@ -13,11 +13,13 @@ def validatePitestVersionProvider = tasks.register("validatePitestVersion") {
         logger.info("Configured 'pitestAggregatorVersion': {}", aggregatorVersion)
         List<String> linesWithVersionConstant = []
         sourceSets.main.groovy.srcDirs.each { File groovyMainSrcDir ->
-            groovyMainSrcDir.eachFileRecurse(groovy.io.FileType.FILES) { file ->
-                if (file.name == "PitestPlugin.groovy") {
-                    linesWithVersionConstant += file.text.readLines()
-                        .findAll { it.contains("String DEFAULT_PITEST_VERSION =") }
-                        .each { logger.info("Line with version constant: {}", it) }
+            if (groovyMainSrcDir.exists()) {
+                groovyMainSrcDir.eachFileRecurse(groovy.io.FileType.FILES) { file ->
+                    if (file.name == "PitestPlugin.groovy") {
+                        linesWithVersionConstant += file.text.readLines()
+                            .findAll { it.contains("String DEFAULT_PITEST_VERSION =") }
+                            .each { logger.info("Line with version constant: {}", it) }
+                    }
                 }
             }
         }

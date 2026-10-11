@@ -326,8 +326,9 @@ abstract class PitestTask extends JavaExec {
     }
 
     @Input
+    @Optional
     String getAdditionalClasspathFilePath() {
-        return additionalClasspathFile.asFile.get().relativePath(rootDir)
+        return additionalClasspathFile.isPresent() ? additionalClasspathFile.asFile.get().relativePath(rootDir) : null
     }
 
     @Input
