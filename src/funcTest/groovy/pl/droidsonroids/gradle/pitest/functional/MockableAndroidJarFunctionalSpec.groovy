@@ -15,7 +15,7 @@ class MockableAndroidJarFunctionalSpec extends AbstractPitestFunctionalSpec {
                         mavenCentral()
                     }
                     dependencies {
-                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.5.21"
+                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21"
                         classpath 'com.android.tools.build:gradle:8.5.1'
                     }
                 }

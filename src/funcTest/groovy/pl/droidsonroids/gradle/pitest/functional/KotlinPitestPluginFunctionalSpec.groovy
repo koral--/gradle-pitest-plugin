@@ -22,7 +22,7 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
                         mavenCentral()
                     }
                     dependencies {
-                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.24"
+                        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21"
                         classpath 'com.android.tools.build:gradle:8.5.1'
                     }
                 }
@@ -45,7 +45,7 @@ class KotlinPitestPluginFunctionalSpec extends AbstractPitestFunctionalSpec {
                 }
                 dependencies {
                     testImplementation 'junit:junit:4.13.2'
-                    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.5.21"
+                    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.3.21"
                 }
             """.stripIndent()
         and:

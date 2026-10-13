@@ -10,12 +10,26 @@ class AndroidUtils {
 
     static final String PITEST_RELEASE_TASK_NAME = "${PitestPlugin.PITEST_TASK_NAME}Release"
 
+    /**
+     * ProjectBuilder using the Gradle user home shared by all unit tests (set by the "test" task).
+     * Without it every test gets a fresh one and downloads the same artifacts (e.g. pitestTestCompile POMs) again,
+     * which gets the machine rate limited by Maven Central.
+     */
+    static ProjectBuilder projectBuilder() {
+        ProjectBuilder builder = ProjectBuilder.builder()
+        String sharedUserHome = System.getProperty('projectBuilder.gradleUserHome')
+        if (sharedUserHome) {
+            builder.withGradleUserHomeDir(new File(sharedUserHome))
+        }
+        return builder
+    }
+
     static Project createSampleLibraryProject(File... rootDir) {
         return createSampleLibraryProject(false, rootDir)
     }
 
     static Project createSampleLibraryProject(boolean applyPitestFirst, File... rootDir) {
-        ProjectBuilder builder = ProjectBuilder.builder()
+        ProjectBuilder builder = projectBuilder()
         if (rootDir.length > 0) {
             builder.withProjectDir(rootDir[0])
         }
@@ -52,7 +66,7 @@ class AndroidUtils {
     }
 
     static Project createSampleApplicationProject(boolean applyPitestFirst, File... rootDir) {
-        ProjectBuilder builder = ProjectBuilder.builder()
+        ProjectBuilder builder = projectBuilder()
         if (rootDir.length > 0) {
             builder.withProjectDir(rootDir[0])
         }

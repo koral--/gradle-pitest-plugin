@@ -19,7 +19,6 @@ import groovy.transform.CompileDynamic
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -32,6 +31,27 @@ class PitestPluginTest extends Specification {
             assert task != null
             assert task.group == group
         }
+    }
+
+    //the dependencies of variant tasks are lazy (closures), so `Task.getDependsOn()` does not list them by name
+    private static Set<String> dependencyNames(Task task) {
+        return task.taskDependencies.getDependencies(task)*.name as Set
+    }
+
+    @Issue('https://github.com/szpak/gradle-pitest-plugin/issues/390')
+    void "add junit-platform-launcher based on direct test dependencies without creating helper configuration"() {
+        given:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.dependencies.add("testImplementation", "org.junit.jupiter:junit-jupiter-api:5.10.0")
+        when:
+            project.evaluate()
+            project.configurations.getByName("debugUnitTestRuntimeClasspath").incoming.resolutionResult.allComponents  //triggers withDependencies
+        then:
+            project.configurations.getByName("testRuntimeOnly").dependencies.any { dependency ->
+                dependency.group == "org.junit.platform" && dependency.name == "junit-platform-launcher"
+            }
+        and:
+            project.configurations.findByName("tmpTestImplementation") == null
     }
 
     void "add pitest tasks to android library project in proper group"() {
@@ -64,7 +84,7 @@ class PitestPluginTest extends Specification {
 
     void "apply pitest plugin without android plugin applied"() {
         given:
-            Project project = ProjectBuilder.builder().build()
+            Project project = AndroidUtils.projectBuilder().build()
         expect:
             !project.plugins.hasPlugin("com.android.application") &&
                 !project.plugins.hasPlugin("com.android.library") &&
@@ -82,8 +102,8 @@ class PitestPluginTest extends Specification {
             Project project = AndroidUtils.createSampleLibraryProject()
             project.evaluate()
         then:
-            assert project.tasks[AndroidUtils.PITEST_RELEASE_TASK_NAME].getDependsOn().find { it == 'compileReleaseUnitTestSources' }
-            assert project.tasks["${PitestPlugin.PITEST_TASK_NAME}Debug"].getDependsOn().find { it == 'compileDebugUnitTestSources' }
+            assert dependencyNames(project.tasks[AndroidUtils.PITEST_RELEASE_TASK_NAME]).contains('compileReleaseUnitTestSources')
+            assert dependencyNames(project.tasks["${PitestPlugin.PITEST_TASK_NAME}Debug"]).contains('compileDebugUnitTestSources')
     }
 
     @SuppressWarnings("ImplicitClosureParameter")
@@ -92,7 +112,7 @@ class PitestPluginTest extends Specification {
             Project project = AndroidUtils.createSampleApplicationProject()
             project.evaluate()
         then:
-            assert project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"].getDependsOn().find { it == 'compileFreeBlueReleaseUnitTestSources' }
+            assert dependencyNames(project.tasks["${PitestPlugin.PITEST_TASK_NAME}FreeBlueRelease"]).contains('compileFreeBlueReleaseUnitTestSources')
     }
 
     @SuppressWarnings("ImplicitClosureParameter")
@@ -136,6 +156,16 @@ class PitestPluginTest extends Specification {
             assert pitestDebug.taskDependencies.getDependencies(pitestDebug)*.name.contains("compileDebugUnitTestSources")
     }
 
+    void "use a separate classpath file for every variant to not break tasks running in parallel"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            project.evaluate()
+        then:
+            File debugFile = project.tasks.getByName('pitestDebug').additionalClasspathFile.get().asFile
+            File releaseFile = project.tasks.getByName('pitestRelease').additionalClasspathFile.get().asFile
+            debugFile != releaseFile
+    }
+
     @SuppressWarnings("ImplicitClosureParameter")
     void "new variant API uses Android style variant directory names"() {
         when:
@@ -170,7 +200,7 @@ class PitestPluginTest extends Specification {
             assert project.tasks.findByName("pitestMockableAndroidJar") == null
     }
 
-    void "variant tasks are added on the legacy path when pitest is applied before the Android plugin"() {
+    void "variant tasks are added when pitest is applied before the Android plugin"() {
         when:
             Project project = AndroidUtils.createSampleApplicationProject(true)
             project.evaluate()
@@ -199,6 +229,24 @@ class PitestPluginTest extends Specification {
             Task mockableTask = project.tasks.findByName("pitestMockableAndroidJar")
             assert mockableTask != null
             assert mockableTask.outputJar.get().asFile.name == "pitest-android-31.jar"
+    }
+
+    void "reportDir defaults to the pitest directory in reports"() {
+        when:
+            Project project = AndroidUtils.createSampleLibraryProject()
+        then:
+            project.pitest.reportDir.get().asFile == new File(project.layout.buildDirectory.asFile.get(), "reports/pitest")
+    }
+
+    void "reportDir set by the user is not overwritten when another plugin is applied afterwards"() {
+        given:
+            Project project = AndroidUtils.createSampleLibraryProject()
+            File customReportDir = new File(project.projectDir, "custom-report-dir")
+            project.pitest.reportDir = customReportDir
+        when:
+            project.pluginManager.apply("jacoco")
+        then:
+            project.pitest.reportDir.get().asFile == customReportDir
     }
 
 }

@@ -22,6 +22,10 @@ import spock.lang.PendingFeature
 @CompileDynamic
 class PitestPluginClasspathFilteringSpec extends BasicProjectBuilderSpec {
 
+    void setup() {
+        project.pitest.useClasspathFile = false //to simplify forceClasspathResolutionAndReturnIt() with using classpath file enabled by default
+    }
+
     @Issue('https://github.com/szpak/gradle-pitest-plugin/issues/52')
     void "should filter dynamic library '#libFileName' by default"() {
         given:
@@ -56,7 +60,7 @@ class PitestPluginClasspathFilteringSpec extends BasicProjectBuilderSpec {
 
     void "should not filter source set directory by default"() {
         given:
-            File testClassesDir = new File(tmpProjectDir, 'build/intermediates/javac/release/compileReleaseJavaWithJavac/classes')
+            File testClassesDir = new File(project.projectDir, 'build/intermediates/javac/release/compileReleaseJavaWithJavac/classes')
         and:
             PitestTask task = getJustOnePitestTaskOrFail()
         expect:
