@@ -1,7 +1,7 @@
 import com.vanniktech.maven.publish.GradlePublishPlugin
 
 plugins {
-    id 'io.github.ben-manes.versions' version '0.65.0'
+    id 'io.github.ben-manes.versions' version '0.66.0'
     id 'groovy'
     id 'codenarc'
     id 'java-gradle-plugin'
