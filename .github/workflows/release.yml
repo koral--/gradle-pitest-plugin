@@ -18,7 +18,7 @@ concurrency:
 jobs:
   validate:
     name: Validate release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
@@ -47,7 +47,7 @@ jobs:
     name: Publish GitHub release
     if: github.repository == 'koral--/gradle-pitest-plugin'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -75,7 +75,7 @@ jobs:
     name: Publish to Gradle Plugin Portal and Maven Central
     if: github.repository == 'koral--/gradle-pitest-plugin'
     needs: release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
       contents: read
