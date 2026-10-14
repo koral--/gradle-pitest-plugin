@@ -1,4 +1,4 @@
-# Unreleased
+# 0.3.0 - 2026-10-14
 
 ## Android Gradle Plugin 9 and Gradle 9
 - Support AGP 9 and the new Android DSL (`android.newDsl`) - [#166](https://github.com/koral--/gradle-pitest-plugin/issues/166), https://github.com/koral--/gradle-pitest-plugin/pull/167
@@ -44,6 +44,19 @@
    }
    ```
 6. Tested with AGP 8.5.1 on Gradle 8.14 and with AGP 9.4.1 on Gradle 9.6.0. The plugin depends on AGP 8.5.1, so builds resolve at least that AGP version.
+
+<!-- Release notes generated using configuration in .github/release.yml at 46f6453fd726ed74afa3cb335efefd2f441e9ec6 -->
+
+## What's Changed
+* Support AGP 9 and new DSL by @koral-- in https://github.com/koral--/gradle-pitest-plugin/pull/167
+* Prepare next release: real AGP 9 testing, unified variant API, upstream 1.19.0, Maven Central publishing by @koral-- in https://github.com/koral--/gradle-pitest-plugin/pull/168
+* Update plugin io.github.ben-manes.versions to v0.66.0 by @renovate[bot] in https://github.com/koral--/gradle-pitest-plugin/pull/170
+* Update funcTest fixtures (major) by @renovate[bot] in https://github.com/koral--/gradle-pitest-plugin/pull/173
+* Update dependency java-jdk to v25 by @renovate[bot] in https://github.com/koral--/gradle-pitest-plugin/pull/172
+* Add GitHub Actions release automation by @koral-- in https://github.com/koral--/gradle-pitest-plugin/pull/174
+
+
+**Full Changelog**: https://github.com/koral--/gradle-pitest-plugin/compare/v0.2.27...v0.3.0
 
 # 0.2.27 - 2026-03-24
 - Add support for Android Dynamic Feature Module by @ekosuhariyadi in https://github.com/koral--/gradle-pitest-plugin/pull/163
