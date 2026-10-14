@@ -138,3 +138,25 @@ Pitest verbose logs may list exceptions like `ExceptionInitializerError`.
 The fastest solution is to set `android.testOptions.unitTests.returnDefaultValues = true`.
 See [Local unit testing documentation](https://developer.android.com/training/testing/unit-testing/local-unit-tests.html#error-not-mocked)
 to see other consequences of this change.
+
+# Releasing
+
+The release process is automated using GitHub Actions and publishes to the Gradle Plugin Portal, Maven Central (via Sonatype Central Portal), and GitHub Releases.
+
+### Required GitHub Secrets
+
+Configure the following repository secrets under **Settings > Secrets and variables > Actions**:
+
+* `GRADLE_PUBLISH_KEY`: Gradle Plugin Portal API key
+* `GRADLE_PUBLISH_SECRET`: Gradle Plugin Portal API secret
+* `MAVEN_CENTRAL_USERNAME`: Sonatype Central Portal User Token Username
+* `MAVEN_CENTRAL_PASSWORD`: Sonatype Central Portal User Token Password
+* `SIGNING_IN_MEMORY_KEY`: PGP private key (ASCII-armored `-----BEGIN PGP PRIVATE KEY BLOCK-----`)
+* `SIGNING_IN_MEMORY_KEY_PASSWORD`: Passphrase for the PGP key (optional if unencrypted)
+* `SIGNING_IN_MEMORY_KEY_ID`: 8-character hex PGP Key ID (optional)
+
+### Release Flow
+
+1. Run the **Prepare release** workflow on `master` with the version to release (e.g. `0.2.28`, without `v` prefix). It verifies the version, generates release notes via GitHub API, updates `gradle.properties`, `README.md`, and `CHANGELOG.md`, and pushes branch `release/v<version>`.
+2. Open the pull request using the link provided in the workflow step summary, add the `ignore-for-release` label, review the notes and versions, and merge after CI passes.
+3. Run the **Release** workflow on `master` with the same version. It validates the merged branch and changelog, executes the full cross-platform CI matrix (Linux and Windows), creates git tag `v<version>`, creates the GitHub release, and publishes to the Gradle Plugin Portal and Maven Central.
