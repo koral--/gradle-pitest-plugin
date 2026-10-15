@@ -16,13 +16,13 @@ Supported Android plugins: `com.android.application`, `com.android.library`, `co
 
 ```groovy
 plugins {
-  id 'pl.droidsonroids.pitest' version '0.2.27'
+  id 'pl.droidsonroids.pitest' version '0.3.0'
 }
 ```
 
 ```kotlin
 plugins {
-  id("pl.droidsonroids.pitest") version "0.2.27"
+  id("pl.droidsonroids.pitest") version "0.3.0"
 }
 ```
 
@@ -37,7 +37,7 @@ buildscript {
     google()
   }
   dependencies {
-    classpath("pl.droidsonroids.gradle:gradle-pitest-plugin:0.2.27")
+    classpath("pl.droidsonroids.gradle:gradle-pitest-plugin:0.3.0")
   }
 }
 
