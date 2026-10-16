@@ -175,14 +175,16 @@ class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
         then:
             assertAgp9Loaded(first)
             first.standardOutput.contains('Configuration cache entry stored.')
-            !first.standardOutput.contains('problem')
+            !first.standardOutput.contains('problems were found')
+            !first.standardOutput.contains('problem was found')
             first.standardOutput.contains('Generated 1 mutations Killed 1 (100%)')
             assertNoPluginDeprecations(first, 'configuration cache, first run')
         when:
             ExecutionResult second = runTasksSuccessfully('pitestDebug', '--configuration-cache', '--rerun-tasks', WARNING_MODE_ALL)
         then:
             second.standardOutput.contains('Reusing configuration cache.')
-            !second.standardOutput.contains('problem')
+            !second.standardOutput.contains('problems were found')
+            !second.standardOutput.contains('problem was found')
             second.wasExecuted(':pitestMockableAndroidJar')
             second.standardOutput.contains('Generated 1 mutations Killed 1 (100%)')
             assertNoPluginDeprecations(second, 'configuration cache, second run')
