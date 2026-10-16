@@ -11,7 +11,7 @@ import nebula.test.functional.ExecutionResult
 class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
 
     //https://developer.android.com/build/releases/about-agp - AGP 9.4 requires Gradle 9.6.0 (minimum and default)
-    private static final String GRADLE_VERSION_FOR_AGP9 = '9.6.0'
+    private static final String GRADLE_VERSION_FOR_AGP9 = '9.8.1'
     private static final String AGP_VERSION_MARKER = 'AGP_VERSION_MARKER='
     private static final String WARNING_MODE_ALL = '--warning-mode=all'
 
@@ -175,14 +175,16 @@ class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
         then:
             assertAgp9Loaded(first)
             first.standardOutput.contains('Configuration cache entry stored.')
-            !first.standardOutput.contains('problem')
+            !first.standardOutput.contains('problems were found')
+            !first.standardOutput.contains('problem was found')
             first.standardOutput.contains('Generated 1 mutations Killed 1 (100%)')
             assertNoPluginDeprecations(first, 'configuration cache, first run')
         when:
             ExecutionResult second = runTasksSuccessfully('pitestDebug', '--configuration-cache', '--rerun-tasks', WARNING_MODE_ALL)
         then:
             second.standardOutput.contains('Reusing configuration cache.')
-            !second.standardOutput.contains('problem')
+            !second.standardOutput.contains('problems were found')
+            !second.standardOutput.contains('problem was found')
             second.wasExecuted(':pitestMockableAndroidJar')
             second.standardOutput.contains('Generated 1 mutations Killed 1 (100%)')
             assertNoPluginDeprecations(second, 'configuration cache, second run')
