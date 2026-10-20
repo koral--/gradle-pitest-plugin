@@ -11,7 +11,7 @@ import nebula.test.functional.ExecutionResult
 class Agp9FunctionalSpec extends AbstractPitestFunctionalSpec {
 
     //https://developer.android.com/build/releases/about-agp - AGP 9.4 requires Gradle 9.6.0 (minimum and default)
-    private static final String GRADLE_VERSION_FOR_AGP9 = '9.8.1'
+    private static final String GRADLE_VERSION_FOR_AGP9 = '9.8.2'
     private static final String AGP_VERSION_MARKER = 'AGP_VERSION_MARKER='
     private static final String WARNING_MODE_ALL = '--warning-mode=all'
 
