@@ -23,7 +23,7 @@ repositories {
     google()
 }
 
-ext.agp9Version = '9.4.1'   //Latest stable AGP 9.x, used only by the funcTestAgp9 lane
+ext.agp9Version = '9.5.0'   //Latest stable AGP 9.x, used only by the funcTestAgp9 lane
 
 sourceSets {
     funcTest
