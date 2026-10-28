@@ -10,7 +10,7 @@ buildscript {
     }
     configurations.create("pitestTestCompile")
     dependencies {
-        pitestTestCompile 'com.arcmutate:pitest-kotlin-plugin:1.5.1'
+        pitestTestCompile 'com.arcmutate:pitest-kotlin-plugin:1.5.2'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21"
         classpath 'com.android.tools.build:gradle:8.5.1'
     }
