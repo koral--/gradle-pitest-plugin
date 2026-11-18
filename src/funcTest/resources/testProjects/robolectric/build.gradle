@@ -39,7 +39,7 @@ java {
 
 ext {
     junitVersion = '4.13.2'
-    robolectricVersion = '4.18'
+    robolectricVersion = '4.18.1'
     supportLibVersion = '28.0.0'
 }
 
